@@ -1,0 +1,357 @@
+/* COD Storefront Modal Styles */
+:root {
+  --cod-primary: #108043;
+  --cod-primary-hover: #0c6635;
+  --cod-accent: #f49342;
+  --cod-bg-overlay: rgba(15, 23, 42, 0.65);
+  --cod-surface: #ffffff;
+  --cod-text-main: #1e293b;
+  --cod-text-muted: #64748b;
+  --cod-border: #e2e8f0;
+  --cod-danger: #e11d48;
+  --cod-danger-bg: #ffe4e6;
+  --cod-success: #16a34a;
+  --cod-radius: 12px;
+}
+
+/* COD Buy Button */
+.cod-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #108043 0%, #0d6837 100%);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 128, 67, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 10px;
+}
+
+.cod-trigger-btn:hover {
+  background: linear-gradient(135deg, #0d6837 0%, #094e29 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 128, 67, 0.35);
+}
+
+.cod-trigger-btn:active {
+  transform: translateY(0);
+}
+
+/* Modal Overlay */
+.cod-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--cod-bg-overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s ease-out;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.cod-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Modal Card */
+.cod-modal-card {
+  background: var(--cod-surface);
+  color: var(--cod-text-main);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--cod-radius);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  transform: scale(0.95) translateY(10px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.cod-modal-overlay.active .cod-modal-card {
+  transform: scale(1) translateY(0);
+}
+
+/* Modal Header */
+.cod-modal-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--cod-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border-top-left-radius: var(--cod-radius);
+  border-top-right-radius: var(--cod-radius);
+}
+
+.cod-modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.cod-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--cod-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cod-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Product Summary Bar */
+.cod-product-bar {
+  padding: 12px 20px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #dcfce7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+}
+
+.cod-product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cod-prod-name {
+  font-weight: 600;
+  color: #166534;
+}
+
+.cod-prod-qty {
+  font-size: 12px;
+  color: #15803d;
+}
+
+.cod-prod-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #166534;
+  text-align: right;
+}
+
+/* Modal Body */
+.cod-modal-body {
+  padding: 20px;
+}
+
+.cod-form-group {
+  margin-bottom: 14px;
+}
+
+.cod-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #334155;
+}
+
+.cod-input, .cod-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--cod-border);
+  border-radius: 8px;
+  font-size: 14.5px;
+  box-sizing: border-box;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cod-input:focus, .cod-select:focus {
+  border-color: var(--cod-primary);
+  box-shadow: 0 0 0 3px rgba(16, 128, 67, 0.12);
+}
+
+.cod-input.invalid {
+  border-color: var(--cod-danger);
+  background: #fff1f2;
+}
+
+.cod-field-error {
+  font-size: 12px;
+  color: var(--cod-danger);
+  margin-top: 4px;
+  display: none;
+}
+
+.cod-input.invalid + .cod-field-error {
+  display: block;
+}
+
+.cod-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* OTP Step Box */
+.cod-otp-box {
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  padding: 14px;
+  border-radius: 8px;
+  margin: 14px 0;
+}
+
+.cod-otp-box.verified {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.cod-btn-secondary {
+  background: #e2e8f0;
+  color: #1e293b;
+  border: none;
+  padding: 9px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cod-btn-secondary:hover {
+  background: #cbd5e1;
+}
+
+/* Pricing Breakdown */
+.cod-price-summary {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--cod-border);
+}
+
+.cod-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--cod-text-muted);
+  margin-bottom: 6px;
+}
+
+.cod-summary-row.total {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cod-border);
+}
+
+/* Submit Button */
+.cod-submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--cod-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.cod-submit-btn:hover:not(:disabled) {
+  background: var(--cod-primary-hover);
+}
+
+.cod-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Alert Boxes */
+.cod-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  display: none;
+}
+
+.cod-alert.error {
+  display: block;
+  background: var(--cod-danger-bg);
+  color: var(--cod-danger);
+  border: 1px solid #fecdd3;
+}
+
+.cod-alert.success {
+  display: block;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* Success View */
+.cod-success-view {
+  text-align: center;
+  padding: 24px 10px;
+}
+
+.cod-success-icon {
+  width: 60px;
+  height: 60px;
+  background: #dcfce7;
+  color: #16a34a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 14px;
+}
+
+.cod-order-number-badge {
+  display: inline-block;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+  margin: 10px 0;
+}

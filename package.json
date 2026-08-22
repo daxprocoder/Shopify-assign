@@ -1,0 +1,27 @@
+{
+  "name": "shopify-assign",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "node tests/test-funnel-and-idempotency.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
+  }
+}

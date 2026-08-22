@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Storefront Product Page - COD Order Form</title>
+  <link rel="stylesheet" href="/storefront/cod-modal.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+    }
+    .top-banner {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 24px;
+      font-size: 13.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .top-banner a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .store-container {
+      max-width: 1040px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .product-img-box {
+      background: #f1f5f9;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 380px;
+      font-size: 80px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .product-details {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .badge {
+      display: inline-block;
+      align-self: flex-start;
+      background: #dcfce7;
+      color: #166534;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .product-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .product-price {
+      font-size: 24px;
+      font-weight: 800;
+      color: #108043;
+      margin-bottom: 16px;
+    }
+    .product-desc {
+      font-size: 14.5px;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .qty-btn {
+      width: 34px;
+      height: 34px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qty-val {
+      font-weight: 700;
+      font-size: 15px;
+      min-width: 24px;
+      text-align: center;
+    }
+    .standard-buy-btn {
+      width: 100%;
+      padding: 13px;
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .or-divider {
+      text-align: center;
+      position: relative;
+      margin: 14px 0;
+    }
+    .or-divider::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 100%;
+      height: 1px;
+      background: #e2e8f0;
+    }
+    .or-divider span {
+      position: relative;
+      background: #ffffff;
+      padding: 0 10px;
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .sim-card {
+      margin-top: 30px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .sim-card h4 {
+      font-size: 14px;
+      color: #334155;
+      margin-bottom: 8px;
+    }
+    .sim-card ul {
+      margin-left: 20px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    @media (max-width: 768px) {
+      .product-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-banner">
+    <div><strong>daksh-cod-app.myshopify.com</strong> (Storefront Preview)</div>
+    <div>
+      <a href="/dashboard" target="_blank">📊 Open Merchant Funnel Dashboard &rarr;</a>
+    </div>
+  </div>
+
+  <div class="store-container">
+    <div class="product-grid">
+      <div class="product-img-box">
+        🎧
+      </div>
+
+      <div class="product-details">
+        <span class="badge">In Stock • Fast Delivery</span>
+        <h1 class="product-title" id="demo-prod-title">Wireless ANC Headphones Max</h1>
+        <div class="product-price" id="demo-prod-price">₹1,499.00</div>
+        <p class="product-desc">
+          Experience crystal clear sound and powerful active noise cancellation with 40-hour battery life. Pay comfortably when the package arrives at your doorstep!
+        </p>
+
+        <div class="qty-row">
+          <label style="font-size: 13px; font-weight: 600; color: #475569;">Quantity:</label>
+          <button type="button" class="qty-btn" id="qty-minus">-</button>
+          <span class="qty-val" id="qty-display">1</span>
+          <button type="button" class="qty-btn" id="qty-plus">+</button>
+        </div>
+
+        <button type="button" class="standard-buy-btn" onclick="alert('Standard Prepaid Shopify Checkout')">
+          Add to Cart (Prepaid)
+        </button>
+
+        <div class="or-divider"><span>OR BUY WITH 1-CLICK</span></div>
+
+        <!-- The COD Quick Checkout Button -->
+        <button
+          type="button"
+          class="cod-trigger-btn"
+          id="cod-quick-buy-btn"
+          data-cod-trigger
+          data-product-title="Wireless ANC Headphones Max"
+          data-product-price="1499"
+          data-product-quantity="1"
+          data-variant-id="4482910401923"
+        >
+          <span>⚡ Cash on Delivery (COD)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Testing & Edge Cases Guide Box -->
+    <div class="sim-card">
+      <h4>🧪 What you can test live on this storefront:</h4>
+      <ul>
+        <li><strong>Phone Normalization:</strong> Try typing <code>+91 98765 43210</code>, <code>919876543210</code>, or <code>9876543210</code> — automatically formatted to canonical <code>+919876543210</code>.</li>
+        <li><strong>Funnel Event Integrity:</strong> Opening the form 3 times or changing inputs only records 1 distinct session event per step.</li>
+        <li><strong>Pincode Blocklist:</strong> Try entering blocked pincode <code>110006</code> or <code>700001</code> to see real-time blocklist validation.</li>
+        <li><strong>Mock SMS OTP:</strong> Click "Send OTP" to see the server console output and verify using the displayed debug code or <code>000000</code>.</li>
+        <li><strong>Idempotency:</strong> Submissions are locked and guaranteed to create exactly 1 Shopify order.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    let qty = 1;
+    const pricePerUnit = 1499;
+    const qtyDisplay = document.getElementById('qty-display');
+    const codBtn = document.getElementById('cod-quick-buy-btn');
+
+    document.getElementById('qty-plus').addEventListener('click', () => {
+      qty++;
+      qtyDisplay.textContent = qty;
+      codBtn.setAttribute('data-product-quantity', qty);
+    });
+
+    document.getElementById('qty-minus').addEventListener('click', () => {
+      if (qty > 1) {
+        qty--;
+        qtyDisplay.textContent = qty;
+        codBtn.setAttribute('data-product-quantity', qty);
+      }
+    });
+  </script>
+
+  <script src="/storefront/cod-modal.js"></script>
+</body>
+</html>

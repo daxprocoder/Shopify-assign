@@ -1,0 +1,7 @@
+name = "COD Order Form"
+type = "theme_app_extension"
+
+[[blocks]]
+name = "COD Buy Button"
+target = "section"
+template = "product"

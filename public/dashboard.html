@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shopify COD Order Form - Merchant Dashboard & Funnel Analytics</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --primary: #008060;
+      --primary-dark: #004c3f;
+      --primary-light: #f0fdf4;
+      --bg: #f6f6f7;
+      --surface: #ffffff;
+      --text: #202223;
+      --text-subdued: #6d7175;
+      --border: #e1e3e5;
+      --danger: #d72c0d;
+      --danger-bg: #fff4f2;
+      --warning: #b98900;
+      --warning-bg: #fffbeb;
+      --success: #008060;
+      --radius: 10px;
+      --shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .app-header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge-cod {
+      background: #e3f1df;
+      color: #008060;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .store-badge {
+      font-size: 13px;
+      color: var(--text-subdued);
+      background: #f1f2f3;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary {
+      background: #ffffff;
+      border-color: #babfc3;
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #f6f6f7; }
+    .btn-whatsapp {
+      background: #25d366;
+      color: #ffffff;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+    .btn-whatsapp:hover { background: #1eb954; color: #fff; }
+
+    .main-container {
+      max-width: 1200px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+
+    /* Tabs Bar */
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      gap: 24px;
+    }
+    .tab-item {
+      padding: 12px 4px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-subdued);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-item.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Range Filter */
+    .filter-group {
+      display: flex;
+      gap: 6px;
+      background: #f1f2f3;
+      padding: 3px;
+      border-radius: 6px;
+    }
+    .filter-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-subdued);
+    }
+    .filter-btn.active {
+      background: #ffffff;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Key Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-subdued);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-subdued);
+      margin-top: 4px;
+    }
+
+    /* Funnel Visualization */
+    .funnel-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .funnel-step-row {
+      display: grid;
+      grid-template-columns: 180px 1fr 160px;
+      align-items: center;
+      gap: 16px;
+      background: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .step-name {
+      font-weight: 600;
+      font-size: 13.5px;
+      color: #1e293b;
+    }
+    .bar-track {
+      background: #e2e8f0;
+      height: 22px;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #008060, #34d399);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+    .step-metrics {
+      text-align: right;
+      font-size: 13px;
+    }
+    .metric-count {
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .metric-drop {
+      font-size: 11.5px;
+      color: var(--danger);
+      font-weight: 600;
+    }
+    .metric-conv {
+      font-size: 11.5px;
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    /* Highlight Banner */
+    .alert-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13.5px;
+    }
+    .alert-banner.warning {
+      background: var(--warning-bg);
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    /* Table Styles */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .data-table th {
+      background: #f8fafc;
+      padding: 12px 14px;
+      font-weight: 600;
+      color: var(--text-subdued);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .data-table tr:hover {
+      background: #f8fafc;
+    }
+    .badge-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-status.success { background: #dcfce7; color: #166534; }
+    .badge-status.processing { background: #fef3c7; color: #92400e; }
+    .badge-status.failed { background: #fee2e2; color: #991b1b; }
+
+    /* Form in Settings */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .form-group small {
+      display: block;
+      color: var(--text-subdued);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .input-control {
+      width: 100%;
+      max-width: 400px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+    .input-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(0, 128, 96, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div style="font-size: 22px;">📦</div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 style="font-size: 16px; font-weight: 700;">COD Order Engine</h2>
+          <span class="badge-cod">Shopify App</span>
+        </div>
+        <span class="store-badge" id="header-store-name">daksh-cod-app.myshopify.com</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <a href="/demo" target="_blank" class="btn btn-secondary">
+        <i class="bi bi-shop"></i> View Storefront PDP
+      </a>
+      <button type="button" class="btn btn-primary" onclick="refreshAllData()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh Dashboard
+      </button>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- Navigation Tabs -->
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('funnel')">
+        <i class="bi bi-funnel"></i> Funnel Analytics
+      </div>
+      <div class="tab-item" onclick="switchTab('leads')">
+        <i class="bi bi-telephone-outbound"></i> Abandoned Leads Recovery
+        <span id="lead-count-badge" style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 10px; font-size: 11px;">0</span>
+      </div>
+      <div class="tab-item" onclick="switchTab('orders')">
+        <i class="bi bi-bag-check"></i> Real COD Orders
+      </div>
+      <div class="tab-item" onclick="switchTab('settings')">
+        <i class="bi bi-sliders"></i> Merchant Settings
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 1: FUNNEL TRACKING & DROP-OFF ANALYTICS   -->
+    <!-- ============================================== -->
+    <section id="tab-funnel">
+      <!-- High level KPIs -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total COD Form Sessions</div>
+          <div class="stat-value" id="kpi-sessions">0</div>
+          <div class="stat-sub">Unique customer popup opens</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Confirmed COD Orders</div>
+          <div class="stat-value" id="kpi-orders" style="color: var(--primary);">0</div>
+          <div class="stat-sub">Strictly verified Shopify orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">End-to-End Conversion Rate</div>
+          <div class="stat-value" id="kpi-conv">0.0%</div>
+          <div class="stat-sub">Form Open &rarr; Order Placed</div>
+        </div>
+      </div>
+
+      <!-- Funnel Breakdown Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Customer Journey Funnel & Drop-Off Points</h3>
+            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
+              Session-level tracking with truthful deduplication. Refreshes & retries do not inflate counts.
+            </p>
+          </div>
+          <div class="filter-group">
+            <button type="button" class="filter-btn" onclick="changeDateRange('today', this)">Today</button>
+            <button type="button" class="filter-btn active" onclick="changeDateRange('7d', this)">Last 7 Days</button>
+            <button type="button" class="filter-btn" onclick="changeDateRange('30d', this)">Last 30 Days</button>
+          </div>
+        </div>
+
+        <!-- Biggest Drop Point Highlight -->
+        <div id="biggest-drop-banner" class="alert-banner warning" style="display: none;">
+          <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px;"></i>
+          <div>
+            <strong>Major Drop-Off Alert:</strong>
+            <span id="biggest-drop-text">Calculating funnel drop points...</span>
+          </div>
+        </div>
+
+        <!-- Funnel Step Visualization -->
+        <div class="funnel-container" id="funnel-steps-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 2: ABANDONED LEADS & RECOVERY HUB          -->
+    <!-- ============================================== -->
+    <section id="tab-leads" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Abandoned Leads (Phone Captured)</h3>
+            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
+              Customers who entered a valid phone number but dropped off before completing the order. Recover them via 1-Click WhatsApp!
+            </p>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th>Phone Number</th>
+              <th>Last Step Reached</th>
+              <th>Pincode / Location</th>
+              <th>Cart Value</th>
+              <th>Time</th>
+              <th>1-Click Recovery Action</th>
+            </tr>
+          </thead>
+          <tbody id="abandoned-leads-tbody">
+            <tr><td colspan="7" style="text-align: center; color: var(--text-subdued);">No abandoned leads captured yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 3: REAL COD ORDERS                         -->
+    <!-- ============================================== -->
+    <section id="tab-orders" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Real COD Orders Placed via App</h3>
+            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
+              All orders are tagged <code>COD-Form</code> with pending payment status and idempotency protection.
+            </p>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order Number</th>
+              <th>Status</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Total Amount</th>
+              <th>COD Fee</th>
+              <th>Date & Time</th>
+              <th>Shopify Admin</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody">
+            <tr><td colspan="9" style="text-align: center; color: var(--text-subdued);">No orders placed yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 4: MERCHANT SETTINGS                       -->
+    <!-- ============================================== -->
+    <section id="tab-settings" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">COD Behavior & Business Rules</h3>
+        </div>
+
+        <form id="settings-form" onsubmit="saveSettings(event)">
+          <div class="form-group">
+            <label for="setting-cod-fee">Extra COD Handling Fee (INR)</label>
+            <input type="number" id="setting-cod-fee" class="input-control" step="1" min="0" placeholder="e.g. 49" value="49" />
+            <small>Added as a shipping convenience fee to the order total on storefront.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="setting-pincode-blocklist">Pincode Blocklist (Comma-separated)</label>
+            <input type="text" id="setting-pincode-blocklist" class="input-control" placeholder="e.g. 110006, 700001, 800001" />
+            <small>Disables COD or shows validation warning if customer enters any of these pincodes.</small>
+          </div>
+
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="setting-require-otp" checked style="width: 18px; height: 18px;" />
+              <span>Enable Mock SMS OTP Verification before order confirmation</span>
+            </label>
+            <small>Logs verification code server-side and enforces verification on storefront.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="setting-order-tag">Shopify Order Tag</label>
+            <input type="text" id="setting-order-tag" class="input-control" value="COD-Form" />
+            <small>Tag attached to all orders created by this app in Shopify Admin.</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="save-settings-btn">
+            Save Merchant Settings
+          </button>
+          <span id="settings-save-status" style="margin-left: 12px; font-size: 13px; font-weight: 600; color: var(--primary);"></span>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let currentRange = '7d';
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+
+      const activeTabEl = Array.from(document.querySelectorAll('.tab-item')).find(t => t.textContent.toLowerCase().includes(tabName));
+      if (activeTabEl) activeTabEl.classList.add('active');
+
+      const targetSection = document.getElementById(`tab-${tabName}`);
+      if (targetSection) targetSection.style.display = 'block';
+
+      if (tabName === 'funnel') loadFunnelData();
+      if (tabName === 'leads') loadAbandonedLeads();
+      if (tabName === 'orders') loadOrders();
+      if (tabName === 'settings') loadSettings();
+    }
+
+    function changeDateRange(range, btn) {
+      currentRange = range;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadFunnelData();
+    }
+
+    async function loadFunnelData() {
+      try {
+        const res = await fetch(`/api/dashboard/funnel?range=${currentRange}`);
+        const data = await res.json();
+
+        document.getElementById('kpi-sessions').textContent = data.totalSessions;
+        document.getElementById('kpi-orders').textContent = data.totalOrders;
+        document.getElementById('kpi-conv').textContent = `${data.overallConversionRate}%`;
+
+        // Biggest Drop Point
+        const dropBanner = document.getElementById('biggest-drop-banner');
+        if (data.biggestDropPoint && data.biggestDropPoint.dropCount > 0) {
+          dropBanner.style.display = 'flex';
+          document.getElementById('biggest-drop-text').textContent =
+            `Biggest customer drop point is between ${data.biggestDropPoint.previousStep} → ${data.biggestDropPoint.step} (${data.biggestDropPoint.dropCount} drop-offs, ${data.biggestDropPoint.dropPercent}% drop rate).`;
+        } else {
+          dropBanner.style.display = 'none';
+        }
+
+        // Render Step Bars
+        const stepsContainer = document.getElementById('funnel-steps-list');
+        stepsContainer.innerHTML = '';
+
+        const maxCount = Math.max(1, data.totalSessions);
+
+        data.funnel.forEach((item, index) => {
+          const percentOfTotal = Math.round((item.count / maxCount) * 100);
+          const row = document.createElement('div');
+          row.className = 'funnel-step-row';
+
+          row.innerHTML = `
+            <div class="step-name">${item.displayName}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${Math.max(percentOfTotal, 4)}%;">
+                ${percentOfTotal > 10 ? percentOfTotal + '%' : ''}
+              </div>
+            </div>
+            <div class="step-metrics">
+              <div class="metric-count">${item.count} sessions</div>
+              ${index > 0 ? `<div class="metric-conv">Step Conv: ${item.conversionFromPrevious}%</div>` : ''}
+              ${index > 0 && item.dropCount > 0 ? `<div class="metric-drop">-${item.dropCount} drop (${item.dropOffFromPrevious}%)</div>` : ''}
+            </div>
+          `;
+          stepsContainer.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error loading funnel:', err);
+      }
+    }
+
+    async function loadAbandonedLeads() {
+      try {
+        const res = await fetch('/api/dashboard/abandoned');
+        const data = await res.json();
+        const tbody = document.getElementById('abandoned-leads-tbody');
+        document.getElementById('lead-count-badge').textContent = data.abandonedLeads.length;
+
+        if (!data.abandonedLeads || data.abandonedLeads.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-subdued); padding: 24px;">No abandoned leads captured yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.abandonedLeads.map(lead => `
+          <tr>
+            <td><strong>${lead.customerName}</strong></td>
+            <td><code>${lead.customerPhone}</code></td>
+            <td><span class="badge-status processing">${lead.lastStepDisplay}</span></td>
+            <td>${lead.city || ''} ${lead.pincode !== 'N/A' ? '(' + lead.pincode + ')' : ''}</td>
+            <td><strong>${lead.cartTotal}</strong></td>
+            <td style="font-size: 12px; color: var(--text-subdued);">${lead.abandonedAt}</td>
+            <td>
+              <a href="${lead.whatsappUrl}" target="_blank" class="btn btn-whatsapp">
+                <i class="bi bi-whatsapp"></i> Recover via WhatsApp
+              </a>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Error loading leads:', err);
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        const res = await fetch('/api/dashboard/orders');
+        const data = await res.json();
+        const tbody = document.getElementById('orders-tbody');
+
+        if (!data.orders || data.orders.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-subdued); padding: 24px;">No orders placed yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.orders.map(o => `
+          <tr>
+            <td><strong>${o.orderNumber}</strong></td>
+            <td><span class="badge-status ${o.status.toLowerCase()}">${o.status}</span></td>
+            <td>${o.customerName}</td>
+            <td><code>${o.customerPhone}</code></td>
+            <td style="font-size: 12px;">${o.addressSummary}</td>
+            <td><strong>${o.totalPrice}</strong></td>
+            <td>${o.codFee}</td>
+            <td style="font-size: 12px; color: var(--text-subdued);">${o.createdAt}</td>
+            <td>
+              ${o.adminLink ? `<a href="${o.adminLink}" target="_blank" class="btn btn-secondary" style="padding: 3px 8px; font-size: 11.5px;">View in Admin &rarr;</a>` : `<span style="font-size: 11px; color: #64748b;">Sandbox Created</span>`}
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Error loading orders:', err);
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/cod/settings');
+        const data = await res.json();
+        if (data.settings) {
+          document.getElementById('setting-cod-fee').value = data.settings.codFee || 0;
+          document.getElementById('setting-pincode-blocklist').value = (data.settings.pincodeBlocklist || []).join(', ');
+          document.getElementById('setting-require-otp').checked = Boolean(data.settings.requireOtp);
+          document.getElementById('setting-order-tag').value = data.settings.orderTag || 'COD-Form';
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
+    }
+
+    async function saveSettings(e) {
+      e.preventDefault();
+      const statusEl = document.getElementById('settings-save-status');
+      statusEl.textContent = 'Saving...';
+
+      const payload = {
+        codFee: parseFloat(document.getElementById('setting-cod-fee').value) || 0,
+        pincodeBlocklist: document.getElementById('setting-pincode-blocklist').value,
+        requireOtp: document.getElementById('setting-require-otp').checked,
+        orderTag: document.getElementById('setting-order-tag').value,
+      };
+
+      try {
+        const res = await fetch('/api/dashboard/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusEl.textContent = '✓ Settings updated successfully!';
+          setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        }
+      } catch (err) {
+        statusEl.textContent = '❌ Failed to save settings';
+      }
+    }
+
+    function refreshAllData() {
+      loadFunnelData();
+      loadAbandonedLeads();
+      loadOrders();
+    }
+
+    // Initial Load
+    refreshAllData();
+  </script>
+</body>
+</html>
