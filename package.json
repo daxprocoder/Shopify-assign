@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "node tests/test-funnel-and-idempotency.js"
+    "test": "node tests/test-funnel-and-idempotency.js",
+    "test:k6": ".\\tools\\k6-v0.56.0-windows-amd64\\k6.exe run tests/k6-full-test.js"
   },
   "keywords": [],
   "author": "",

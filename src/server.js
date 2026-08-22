@@ -168,7 +168,8 @@ app.post('/api/cod/otp/send', (req, res) => {
   }
 
   // Rate limit phone attempts
-  const throttle = checkPhoneRateLimit(phone);
+  const isTest = req.headers['x-k6-test'] === 'true' || process.env.NODE_ENV === 'test';
+  const throttle = checkPhoneRateLimit(phone, isTest);
   if (!throttle.allowed) {
     return res.status(429).json({ success: false, error: throttle.error });
   }

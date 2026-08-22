@@ -1,0 +1,483 @@
+{
+  "root_group": {
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "1. Storefront Settings",
+        "path": "::1. Storefront Settings",
+        "id": "789f128bab5cdca32d6688f802838274",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 46,
+              "fails": 0,
+              "name": "GET /api/cod/settings returns 200",
+              "path": "::1. Storefront Settings::GET /api/cod/settings returns 200",
+              "id": "b183a541478811f29b510784f0062006"
+            },
+            {
+              "name": "Settings contains success boolean",
+              "path": "::1. Storefront Settings::Settings contains success boolean",
+              "id": "ce46a37233f7b6d7a6991ba76ab32c34",
+              "passes": 46,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "groups": [],
+        "checks": [
+            {
+              "id": "6457b93866e660f1fce984452b2964f1",
+              "passes": 46,
+              "fails": 0,
+              "name": "POST /api/cod/session returns 200",
+              "path": "::2. Session Initialization::POST /api/cod/session returns 200"
+            },
+            {
+              "passes": 46,
+              "fails": 0,
+              "name": "Session ID matches active session",
+              "path": "::2. Session Initialization::Session ID matches active session",
+              "id": "4b27097ae1a8db599dbf99c4e08a394e"
+            }
+          ],
+        "name": "2. Session Initialization",
+        "path": "::2. Session Initialization",
+        "id": "ad6ad4f7c16cbafa2a429a61af012129"
+      },
+      {
+        "name": "3. Funnel Milestone Ingestion",
+        "path": "::3. Funnel Milestone Ingestion",
+        "id": "fea0d553fe34065d6a75dbbe84ecf3f9",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 0,
+              "name": "Phone milestone returns 200",
+              "path": "::3. Funnel Milestone Ingestion::Phone milestone returns 200",
+              "id": "ba63fa7d0202bd015f863b6f781b9fea",
+              "passes": 46
+            },
+            {
+              "path": "::3. Funnel Milestone Ingestion::Address milestone returns 200",
+              "id": "29e2103508b3bdc5bc4e0ef9063fb5dc",
+              "passes": 46,
+              "fails": 0,
+              "name": "Address milestone returns 200"
+            },
+            {
+              "id": "683b951529185a77bb59b808b0745808",
+              "passes": 46,
+              "fails": 0,
+              "name": "Submit milestone returns 200",
+              "path": "::3. Funnel Milestone Ingestion::Submit milestone returns 200"
+            }
+          ]
+      },
+      {
+        "checks": [
+          {
+            "path": "::4. OTP Lifecycle::OTP send returns 200",
+            "id": "bdc361e7e4d842ca576578e299dc0d2d",
+            "passes": 46,
+            "fails": 0,
+            "name": "OTP send returns 200"
+          },
+          {
+            "path": "::4. OTP Lifecycle::OTP verify returns 200",
+            "id": "9cc477394e54ade82096d925e6639e53",
+            "passes": 46,
+            "fails": 0,
+            "name": "OTP verify returns 200"
+          }
+        ],
+        "name": "4. OTP Lifecycle",
+        "path": "::4. OTP Lifecycle",
+        "id": "e8a2aabd550f9330a86ed5e2dd5f0b4a",
+        "groups": []
+      },
+      {
+        "path": "::5. Order Creation & Idempotency Lock",
+        "id": "f591c55ef59b9b95d0ca431e0aba60a7",
+        "groups": [],
+        "checks": [
+            {
+              "name": "Fresh order returns 200/201",
+              "path": "::5. Order Creation & Idempotency Lock::Fresh order returns 200/201",
+              "id": "9a6c792dca18e4f0576321b58b2efdf9",
+              "passes": 4,
+              "fails": 40
+            },
+            {
+              "id": "aecfb09a8aafefba3608cba85df822ac",
+              "passes": 4,
+              "fails": 40,
+              "name": "Order response has success status",
+              "path": "::5. Order Creation & Idempotency Lock::Order response has success status"
+            },
+            {
+              "path": "::5. Order Creation & Idempotency Lock::Duplicate request returns 200",
+              "id": "2e19ad88684b79b99e5f4c1cb3aa16de",
+              "passes": 4,
+              "fails": 40,
+              "name": "Duplicate request returns 200"
+            },
+            {
+              "id": "355a9cbe598c67979a71c3e102812a1e",
+              "passes": 4,
+              "fails": 40,
+              "name": "Duplicate request has success true",
+              "path": "::5. Order Creation & Idempotency Lock::Duplicate request has success true"
+            }
+          ],
+        "name": "5. Order Creation & Idempotency Lock"
+      },
+      {
+        "id": "ba994de032b95f4830bb3beb1dc4459c",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 44,
+              "fails": 0,
+              "name": "GET /api/dashboard/funnel is 200",
+              "path": "::6. Merchant Dashboard Feeds::GET /api/dashboard/funnel is 200",
+              "id": "22e5554d204ab518f2098e5ff6c50b09"
+            },
+            {
+              "name": "GET /api/dashboard/orders is 200",
+              "path": "::6. Merchant Dashboard Feeds::GET /api/dashboard/orders is 200",
+              "id": "b4a1669aafa38e46dc1a59739033af8b",
+              "passes": 44,
+              "fails": 0
+            },
+            {
+              "fails": 0,
+              "name": "GET /api/dashboard/abandoned is 200",
+              "path": "::6. Merchant Dashboard Feeds::GET /api/dashboard/abandoned is 200",
+              "id": "dae7dc1aa8310d62af74713990f2651c",
+              "passes": 44
+            },
+            {
+              "id": "2835ad586f692b9d1aa167751175a0e7",
+              "passes": 44,
+              "fails": 0,
+              "name": "GET /api/dashboard/idempotency-traces is 200",
+              "path": "::6. Merchant Dashboard Feeds::GET /api/dashboard/idempotency-traces is 200"
+            },
+            {
+              "id": "6ebc01f6e50c9c83a9e8fb30eb9978dd",
+              "passes": 44,
+              "fails": 0,
+              "name": "GET single trace lookup is 200",
+              "path": "::6. Merchant Dashboard Feeds::GET single trace lookup is 200"
+            },
+            {
+              "path": "::6. Merchant Dashboard Feeds::GET /api/dashboard/webhooks is 200",
+              "id": "01c62777c1c68449dc2cb1f67be21f8d",
+              "passes": 44,
+              "fails": 0,
+              "name": "GET /api/dashboard/webhooks is 200"
+            }
+          ],
+        "name": "6. Merchant Dashboard Feeds",
+        "path": "::6. Merchant Dashboard Feeds"
+      },
+      {
+        "checks": [
+          {
+            "id": "b0660e4af2dbb6291e3a98bb1cea0d37",
+            "passes": 44,
+            "fails": 0,
+            "name": "Webhook test trigger verified",
+            "path": "::7. Webhook Security & HMAC Audit::Webhook test trigger verified"
+          },
+          {
+            "name": "Forged webhook rejected with 401",
+            "path": "::7. Webhook Security & HMAC Audit::Forged webhook rejected with 401",
+            "id": "c50e4d994f8ea0b138d9f80ac156d9d2",
+            "passes": 44,
+            "fails": 0
+          }
+        ],
+        "name": "7. Webhook Security & HMAC Audit",
+        "path": "::7. Webhook Security & HMAC Audit",
+        "id": "103c889db884ba846b1a617ddfad7992",
+        "groups": []
+      }
+    ],
+    "checks": [],
+    "name": "",
+    "path": ""
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": false,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 14356.0332
+  },
+  "metrics": {
+    "invalid_hmac_blocked": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 44,
+        "rate": 3.064913502707698
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 226208,
+        "rate": 15756.99894592052
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.02894750656167979,
+        "min": 0,
+        "med": 0,
+        "max": 5.7238,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "http_req_duration": {
+      "contains": "time",
+      "values": {
+        "max": 4253.5817,
+        "p(90)": 415.69857999999994,
+        "p(95)": 1378.3816399999946,
+        "avg": 144.0390769028871,
+        "min": 0.5118,
+        "med": 7.3147
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": false
+        }
+      },
+      "type": "trend"
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 4.2071,
+        "p(90)": 0.6342599999999999,
+        "p(95)": 0.9594449999999989,
+        "avg": 0.22745301837270326,
+        "min": 0,
+        "med": 0
+      }
+    },
+    "successful_orders": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 4,
+        "rate": 0.2786285002461543
+      }
+    },
+    "duplicate_order_hits": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 4,
+        "rate": 0.2786285002461543
+      }
+    },
+    "group_duration": {
+      "values": {
+        "avg": 348.4960620253163,
+        "min": 0.5118,
+        "med": 17.806449999999998,
+        "max": 4749.6068,
+        "p(90)": 1287.48495,
+        "p(95)": 2976.501275
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 638,
+        "rate": 0.16272965879265092,
+        "passes": 124
+      }
+    },
+    "iterations": {
+      "values": {
+        "count": 44,
+        "rate": 3.064913502707698
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 13,
+        "min": 13,
+        "max": 13
+      }
+    },
+    "iteration_duration": {
+      "values": {
+        "avg": 2701.5601886363643,
+        "min": 1045.2054,
+        "med": 2726.24505,
+        "max": 5337.0441,
+        "p(90)": 4090.4939600000002,
+        "p(95)": 4277.05018
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0.5671599999999999,
+        "avg": 0.0753761154855643,
+        "min": 0,
+        "med": 0,
+        "max": 7.9435
+      }
+    },
+    "checks": {
+      "values": {
+        "passes": 782,
+        "fails": 160,
+        "rate": 0.8301486199575372
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 143.7362477690289,
+        "min": 0.5056,
+        "med": 7.17445,
+        "max": 4253.048,
+        "p(90)": 415.6440999999999,
+        "p(95)": 1378.3420349999944
+      }
+    },
+    "order_processing_duration": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(95)": 2115.1000000000004,
+        "avg": 1271.0454545454545,
+        "min": 391,
+        "med": 1260,
+        "max": 4254,
+        "p(90)": 1864.6
+      }
+    },
+    "data_received": {
+      "values": {
+        "count": 3329381,
+        "rate": 231915.1086945104
+      },
+      "type": "counter",
+      "contains": "data"
+    },
+    "failed_requests": {
+      "thresholds": {
+        "rate<0.05": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 92
+      }
+    },
+    "funnel_events_recorded": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 184,
+        "rate": 12.8169110113231
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 6,
+        "min": 2,
+        "max": 13
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 762,
+        "rate": 53.0787292968924
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 22.424845611285267,
+        "min": 0.5118,
+        "med": 6.284,
+        "max": 1447.4287,
+        "p(90)": 46.73326000000002,
+        "p(95)": 62.415639999999996
+      }
+    },
+    "http_req_tls_handshaking": {
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 15.9136,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.06144383202099738,
+        "min": 0
+      }
+    }
+  }
+}
