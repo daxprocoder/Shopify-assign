@@ -76,42 +76,99 @@ Tests phone normalization (+91 canonical formats), funnel deduplication, idempot
 
 ---
 
-## 3. Idempotency Mechanism
+---
 
-Cash-on-Delivery apps face high network flakiness, double-taps on mobile, and duplicate retries. We prevent duplicate order creation via a **4-stage atomic state machine**:
+## 🧠 WHAT WE'RE WATCHING FOR: The Honest Edge Cases & Funnel Truthfulness
 
-1. **Unique Idempotency Key**: Each checkout lifecycle generates an `idempotency_key` (`idem_<sessionId>_<timestamp>`).
-2. **Database Constraint & Lock**: The `orders` table enforces a `UNIQUE(idempotency_key)` constraint.
-3. **In-Flight Concurrency Guard (`PROCESSING` state)**:
-   - When a submit request arrives, an atomic record is inserted with `status: 'PROCESSING'`.
-   - If a duplicate concurrent request arrives while the first is in-flight, it receives HTTP `409 Conflict` (`in_flight: true`) or waits for the resolution.
-4. **Transparent Replay on Success**:
-   - If the key is already marked `status: 'SUCCESS'`, the backend immediately returns the cached Shopify order payload (`orderNumber`, `shopifyOrderId`, `isDuplicate: true`) with HTTP 200 without re-calling Shopify API.
-5. **Safe Retry on Failure**:
-   - If a previous attempt suffered an address error or transient network issue, the order status transitions back to `PROCESSING` to allow the customer to fix the error and resubmit without generating two orders.
+> *"If your funnel numbers can't be trusted, the feature is decoration."*
+
+In e-commerce analytics, client-side pixel tracking and naive counters frequently deceive merchants. Below is exactly how our architecture handles the three fundamental edge cases to ensure **100% truthful, mathematical integrity** across every metric:
+
+```
++-----------------------------------------------------------------------------------------+
+|                                 FUNNEL TRUTHFULNESS MATRIX                              |
++------------------------------------+--------------------------+-------------------------+
+| Edge Case Scenario                 | Naive Tracker (Broken)   | Our Engine (Truthful)   |
++------------------------------------+--------------------------+-------------------------+
+| Customer opens modal 3 times       | 3 sessions (+200% bloat) | Exactly 1 session       |
+| Submit fails -> User retries       | 2 submits / 1 order (50%)| 1 submit / 1 order(100%)|
+| Network drops before thank-you UI  | 0 orders in analytics    | 1 confirmed order       |
++------------------------------------+--------------------------+-------------------------+
+```
 
 ---
 
-## 4. Funnel-Integrity & Truthful Analytics
+### 1. Edge Case: Customer opens the form 3 times but orders once
 
-Many apps present misleading funnel metrics by counting every keystroke, modal reopen, or page refresh. We guarantee truthfulness through the following design:
+* **The Failure Mode:** A shopper on mobile clicks "Buy with COD", closes the popup to re-check product specifications, re-opens the popup, selects a different color/quantity, closes it again, and finally re-opens it to complete the purchase. Naive analytics record 3 `form_opened` events, inflating top-of-funnel traffic by 300% and falsely making the checkout look broken.
+* **How We Keep It Truthful:**
+  1. **Session Stitching (`sessionStorage`):** The storefront client binds all interactions to an immutable `sessionId` (`sess_<random>_<timestamp>`) stored in browser session memory.
+  2. **Client In-Memory Milestone Guards:** The client maintains an in-memory guard dictionary (`eventsFired.form_opened = true`). Subsequent modal re-opens in the same tab suppress duplicate network calls.
+  3. **SQL Set-Theoretic Deduplication:** Even if client state resets (e.g. page refresh), the server funnel query aggregates by distinct sessions:
+     ```sql
+     SELECT COUNT(DISTINCT session_id) AS step_count
+     FROM funnel_events
+     WHERE event_name = 'form_opened' AND shop_domain = ?
+     ```
+  4. **The Guarantee:** 3 modal opens in 1 shopping journey = **Exactly 1 Top-of-Funnel Session**.
 
-### The 5 Funnel Milestones:
-1. `form_opened`: Customer clicked "Buy with COD"; popup rendered.
-2. `phone_entered`: A valid 10-digit Indian phone was completed (fired once on completion/blur, **not per keystroke**).
-3. `address_filled`: Address Line 1, City, State, and valid PIN code were filled to submittable state.
-4. `submit_clicked`: Customer pressed the "Complete Cash on Delivery Order" button.
-5. `order_created`: Server confirmed the Shopify order. **Mathematically guaranteed to equal real orders ($COUNT(DISTINCT\ orders)$) — never more.**
+---
 
-### Deduplication Guarantee:
-- Every event is bound to an immutable `session_id`.
-- The funnel aggregation runs `COUNT(DISTINCT session_id)` per milestone within the selected date range (`today`, `7d`, `30d`).
-- If a customer opens the modal 3 times, changes their address twice, or retries a failed submit, it counts as **exactly 1 session** at each completed step.
+### 2. Edge Case: A submit that fails, then succeeds on retry
 
-### Drop-Off Analysis:
-- Calculates step-to-step conversion $\%$ and drop-off $\%$:
-  $$\text{Step Drop-off} = \left(1 - \frac{\text{Count}(\text{Step}_{n})}{\text{Count}(\text{Step}_{n-1})}\right) \times 100\%$$
-- **Automatic Major Drop Point Alert**: Identifies the step with the highest drop-off rate to alert the merchant (e.g. *Biggest drop-off: Address Filled $\rightarrow$ Submit Clicked*).
+* **The Failure Mode:** A shopper fills the form but mistypes a blocked PIN code or experiences a transient mobile network dropout during submit. The UI shows an error. The customer corrects their PIN and clicks "Complete Order" again. A naive tracker records 2 `submit_clicked` events and 1 `order_created`, falsely showing a **50% drop-off** at the finish line when the customer actually converted at 100%.
+* **How We Keep It Truthful:**
+  1. **Distinct Submission Intent:** The `submit_clicked` funnel count is calculated using `COUNT(DISTINCT session_id)`. Multiple retry clicks in the same session represent one continuous buying intent and are counted as **1 unique submission**.
+  2. **State Machine Recovery (`FAILED` $\rightarrow$ `PROCESSING` $\rightarrow$ `SUCCESS`):**
+     - When the first attempt fails validation (e.g. Pincode Blocklist or Shopify 503), the server records the error without incrementing the order count.
+     - Upon retry with corrected data, the backend locks the state back to `PROCESSING` and dispatches to Shopify.
+  3. **The Guarantee:** 1 failed click + 1 successful retry = **1 Submit $\rightarrow$ 1 Order (100% Step Conversion Rate)**.
+
+---
+
+### 3. Edge Case: An `order_created` event racing the thank-you screen
+
+* **The Failure Mode:** The server contacts Shopify Admin API, successfully creates order `#1001`, and commits the database record. But before the HTTP response reaches the browser (due to poor mobile signal or impatient user clicking reload/back), the connection drops. If tracking depends on the client-side thank-you screen loading to fire a "pixel", the order is placed on Shopify but missing from analytics! Conversely, if the customer double-taps out of frustration, a naive system creates **two duplicate Shopify orders**.
+* **How We Keep It Truthful:**
+  1. **Server-Side Single Source of Truth:** The `order_created` funnel milestone is emitted **server-side inside the atomic order commit transaction** (`src/services/idempotency.js`). It does NOT depend on client-side pixels or thank-you page execution.
+  2. **Deterministic Idempotency Key:** Every checkout attempt carries a deterministic `idempotency_key`. The `orders` SQLite table enforces a `UNIQUE(idempotency_key)` constraint.
+  3. **0ms Cached Replay (`DUPLICATE_CACHE_HIT`):** If the customer reloads or double-clicks, the server intercepts the duplicate key:
+     - Sees `status = 'SUCCESS'`.
+     - Skips calling Shopify Admin API entirely (0ms external latency).
+     - Returns the cached `#1001` order confirmation immediately.
+     - Logs a `DUPLICATE_CACHE_HIT` trace in the Idempotency Waterfall.
+  4. **The Guarantee:** The order is always created **exactly once on Shopify**, and the merchant dashboard always reflects the **real Shopify order count ($COUNT(\text{Orders}) \equiv COUNT(\text{Order Created Events})$)**.
+
+---
+
+## 4. Idempotency Waterfall Architecture
+
+Below is the exact stage-by-stage lifecycle recorded in the SQLite database and rendered live in the Merchant Dashboard:
+
+```
+[Storefront Request: POST /api/cod/order]
+              |
+              v
+     1. REQUEST_INGRESS (Extract idempotencyKey: idem_sess_...)
+              |
+              v
+     2. LOCK_LOOKUP (Check SQLite orders table for existing key)
+             / \
+            /   \
+  [Key Exists & SUCCESS]   [Key is New]
+          /               \
+         v                 v
+ 3a. DUPLICATE_CACHE_HIT  3b. ATOMIC_LOCK_ACQUIRED (Insert status: 'PROCESSING')
+ (Return cached order,     |
+  0ms Shopify API call)    v
+                          4. SHOPIFY_DISPATCH (POST /admin/api/2024-04/orders.json with 10s Timeout Guard)
+                           |
+                           v
+                          5. SHOPIFY_CONFIRMED (HTTP 201 Created -> Order #1001)
+                           |
+                           v
+                          6. DB_COMMITTED_SUCCESS (Atomic update status: 'SUCCESS')
+```
 
 ---
 
@@ -125,6 +182,7 @@ Many apps present misleading funnel metrics by counting every keystroke, modal r
 | **Shopify API Timeout (>10s)** | `AbortController` terminates request after 10s; records `status: 'TIMED_OUT'`. | Customer gets clear alert with recovery advice instead of an infinite spinner. |
 | **Spam / Abuse Attempts** | IP-level rate limiter (`express-rate-limit`) + in-memory phone submit throttler. | Returns HTTP 429 *"Too many order attempts"*; merchant protected from fake COD bots. |
 | **Customer Abandons at Address** | Lead captured at Step 2 (`customer_phone` saved in session). | Appears in **Abandoned Leads Recovery Hub** with a 1-click WhatsApp recovery link. |
+| **Payment Webhook Forgery** | Verifies `X-Shopify-Hmac-Sha256` using constant-time comparison (`crypto.timingSafeEqual`). | Forged webhooks rejected with 401 Unauthorized; valid payments update order to `PAID`. |
 
 ---
 
@@ -133,8 +191,7 @@ Many apps present misleading funnel metrics by counting every keystroke, modal r
 Merchants can configure live rules from the Dashboard (`/dashboard`):
 1. **COD Handling Fee (INR)**: Adds an extra convenience fee (e.g. ₹49.00) calculated live in the modal price breakdown and added as a custom Shopify shipping line.
 2. **Pincode Blocklist**: Comma-separated list of non-serviceable pincodes (e.g. `110006, 700001`). Disables order submission and warns customer in real-time.
-3. **SMS OTP Verification**: Toggle mock SMS OTP verification on or off before order confirmation.
-4. **Shopify Order Tag**: Customize tag added to orders (e.g. `COD-Form`).
+3. **Shopify Order Tag**: Customize tag added to orders (e.g. `COD-Form`).
 
 ---
 
