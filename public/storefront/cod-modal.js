@@ -101,7 +101,10 @@
     overlay.innerHTML = `
       <div class="cod-modal-card" role="dialog" aria-modal="true">
         <div class="cod-modal-header">
-          <h3 class="cod-modal-title">⚡ Quick Cash on Delivery Checkout</h3>
+          <h3 class="cod-modal-title">
+            <i class="bi bi-lightning-charge-fill" style="color: #10b981;"></i>
+            <span>Quick Cash on Delivery</span>
+          </h3>
           <button type="button" class="cod-close-btn" id="cod-modal-close" aria-label="Close">&times;</button>
         </div>
 
@@ -127,7 +130,7 @@
               <label class="cod-label" for="cod-phone">Mobile Number (India) *</label>
               <div style="position: relative;">
                 <input type="tel" id="cod-phone" class="cod-input" placeholder="+91 98765 43210" required />
-                <span id="cod-phone-status" style="position: absolute; right: 10px; top: 10px; font-size: 13px; font-weight: 600;"></span>
+                <span id="cod-phone-status" style="position: absolute; right: 12px; top: 11px; font-size: 13px; font-weight: 700;"></span>
               </div>
               <div class="cod-field-error" id="cod-phone-error">Please enter a valid 10-digit Indian mobile number.</div>
             </div>
@@ -135,7 +138,7 @@
             <!-- Step 2: Delivery Address -->
             <div class="cod-form-group">
               <label class="cod-label" for="cod-address">Street Address / House No / Area *</label>
-              <input type="text" id="cod-address" class="cod-input" placeholder="Flat / House No., Landmark, Street" required />
+              <input type="text" id="cod-address" class="cod-input" placeholder="Flat / House No., Street, Landmark" required />
             </div>
 
             <div class="cod-row-2">
@@ -157,16 +160,18 @@
 
             <!-- Step 3: Mock OTP Verification (if enabled) -->
             <div id="cod-otp-container" class="cod-otp-box" style="display: none;">
-              <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">📱 SMS OTP Verification</div>
-              <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">A 6-digit verification code will be sent to your mobile.</div>
+              <div style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-shield-check" style="color: #10b981;"></i> SMS OTP Verification
+              </div>
+              <div style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">A 6-digit verification code will be sent to your mobile.</div>
               <div id="cod-otp-action-row" style="display: flex; gap: 8px;">
                 <button type="button" id="cod-send-otp-btn" class="cod-btn-secondary">Send OTP Code</button>
               </div>
               <div id="cod-otp-verify-row" style="display: none; margin-top: 10px; gap: 8px;">
-                <input type="text" id="cod-otp-input" class="cod-input" placeholder="Enter 6-digit OTP" style="max-width: 160px;" maxlength="6" />
-                <button type="button" id="cod-verify-otp-btn" class="cod-btn-secondary" style="background: #108043; color: #fff;">Verify</button>
+                <input type="text" id="cod-otp-input" class="cod-input" placeholder="Enter OTP" style="max-width: 150px;" maxlength="6" />
+                <button type="button" id="cod-verify-otp-btn" class="cod-btn-secondary" style="background: #123326; color: #fff; border-color: #123326;">Verify</button>
               </div>
-              <div id="cod-otp-hint" style="font-size: 11.5px; color: #0284c7; margin-top: 6px; display: none;"></div>
+              <div id="cod-otp-hint" style="font-size: 12px; color: #0284c7; margin-top: 8px; font-weight: 600; display: none;"></div>
             </div>
 
             <!-- Summary & Pricing -->
@@ -187,20 +192,23 @@
 
             <!-- Submit Button -->
             <button type="submit" id="cod-submit-order-btn" class="cod-submit-btn">
-              <span>Complete Cash on Delivery Order 📦</span>
+              <i class="bi bi-bag-check-fill"></i>
+              <span>Complete Cash on Delivery Order</span>
             </button>
           </form>
 
           <!-- Success Confirmation View -->
           <div id="cod-success-container" class="cod-success-view" style="display: none;">
-            <div class="cod-success-icon">✓</div>
-            <h3 style="margin: 0; color: #166534; font-size: 20px;">Order Placed Successfully!</h3>
-            <p style="color: #64748b; font-size: 13.5px; margin: 6px 0;">Your Cash-on-Delivery order is confirmed and being prepared for dispatch.</p>
+            <div class="cod-success-icon">
+              <i class="bi bi-check-lg"></i>
+            </div>
+            <h3 style="margin: 0; color: #123326; font-size: 20px; font-weight: 800;">Order Placed Successfully!</h3>
+            <p style="color: #6b7280; font-size: 13.5px; margin: 6px 0;">Your Cash-on-Delivery order is confirmed and being prepared for dispatch.</p>
             <div class="cod-order-number-badge" id="cod-confirmed-order-number">Order #1001</div>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 14px; text-align: left; font-size: 13px;">
+            <div style="background: #f2f4f3; border: 1px solid #e6e8e7; border-radius: 14px; padding: 14px; margin-top: 14px; text-align: left; font-size: 13px;">
               <div><strong>Deliver to:</strong> <span id="cod-confirmed-name"></span></div>
-              <div style="margin-top: 4px;"><strong>Contact:</strong> <span id="cod-confirmed-phone"></span></div>
-              <div style="margin-top: 4px;"><strong>Payable on Delivery:</strong> <span id="cod-confirmed-total" style="color: #108043; font-weight: 700;"></span></div>
+              <div style="margin-top: 5px;"><strong>Contact:</strong> <span id="cod-confirmed-phone"></span></div>
+              <div style="margin-top: 5px;"><strong>Payable on Delivery:</strong> <span id="cod-confirmed-total" style="color: #123326; font-weight: 800;"></span></div>
             </div>
             <button type="button" class="cod-btn-secondary" id="cod-done-btn" style="margin-top: 18px; width: 100%; padding: 12px;">Close</button>
           </div>
@@ -347,7 +355,7 @@
           document.getElementById('cod-otp-verify-row').style.display = 'flex';
           const hintEl = document.getElementById('cod-otp-hint');
           hintEl.style.display = 'block';
-          hintEl.textContent = `⚡ Server logged OTP: ${res.data.debugCode} (or enter 000000)`;
+          hintEl.textContent = `Server logged OTP: ${res.data.debugCode} (or enter 000000)`;
           showAlert('OTP code sent to ' + phoneRes.canonical, 'success');
         } else {
           showAlert(res.data.error || 'Failed to send OTP', 'error');
@@ -440,7 +448,7 @@
 
       const submitBtn = document.getElementById('cod-submit-order-btn');
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>Placing your order... ⏳</span>`;
+      submitBtn.innerHTML = `<i class="bi bi-arrow-repeat" style="display: inline-block; animation: spin 1s linear infinite;"></i> <span>Placing your order...</span>`;
 
       // Funnel Event: submit_clicked
       emitFunnelEvent('submit_clicked', {
@@ -477,7 +485,7 @@
         showSuccessView(res.data, name, phoneRes.canonical);
       } else {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>Complete Cash on Delivery Order 📦</span>`;
+        submitBtn.innerHTML = `<i class="bi bi-bag-check-fill"></i> <span>Complete Cash on Delivery Order</span>`;
         const errMsg = res.data.error || 'Failed to place COD order. Please try again.';
         showAlert(errMsg, 'error');
       }

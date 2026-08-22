@@ -3,89 +3,119 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Storefront Product Page - COD Order Form</title>
+  <title>Storefront Product Page - One-Click COD</title>
+  <!-- Google Fonts & Bootstrap Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/storefront/cod-modal.css" />
+
   <style>
+    :root {
+      --font-main: 'Plus Jakarta Sans', sans-serif;
+      --color-canvas: #f2f4f3;
+      --color-primary-dark: #123326;
+      --color-primary-hover: #0c241b;
+      --color-primary-green: #10b981;
+      --color-surface: #ffffff;
+      --color-text-main: #111827;
+      --color-text-subtle: #6b7280;
+      --color-border: #e6e8e7;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f8fafc;
-      color: #0f172a;
+      font-family: var(--font-main);
+      background: var(--color-canvas);
+      color: var(--color-text-main);
       min-height: 100vh;
     }
     .top-banner {
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 10px 24px;
-      font-size: 13.5px;
+      background: var(--color-primary-dark);
+      color: #ffffff;
+      padding: 12px 28px;
+      font-size: 13px;
+      font-weight: 600;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .top-banner a {
-      color: #38bdf8;
+      color: #34d399;
       text-decoration: none;
-      font-weight: 600;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      transition: background 0.15s;
+    }
+    .top-banner a:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
     .store-container {
-      max-width: 1040px;
-      margin: 40px auto;
+      max-width: 1080px;
+      margin: 36px auto;
       padding: 0 20px;
     }
     .product-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.1fr 1fr;
       gap: 40px;
-      background: #ffffff;
-      padding: 32px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e2e8f0;
+      background: var(--color-surface);
+      padding: 36px;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--color-border);
     }
     .product-img-box {
-      background: #f1f5f9;
-      border-radius: 12px;
+      background: #f8fafc;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 380px;
-      font-size: 80px;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+      min-height: 420px;
+      color: var(--color-primary-dark);
+      font-size: 90px;
+      border: 1px solid #edf2f7;
     }
     .product-details {
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
-    .badge {
-      display: inline-block;
+    .badge-in-stock {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       align-self: flex-start;
-      background: #dcfce7;
-      color: #166534;
-      padding: 4px 10px;
-      border-radius: 20px;
+      background: #ecfdf5;
+      color: #065f46;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: 12px;
     }
     .product-title {
-      font-size: 26px;
-      font-weight: 700;
-      color: #0f172a;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--color-text-main);
+      letter-spacing: -0.6px;
       margin-bottom: 8px;
     }
     .product-price {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 800;
-      color: #108043;
+      color: var(--color-primary-dark);
       margin-bottom: 16px;
     }
     .product-desc {
-      font-size: 14.5px;
-      color: #64748b;
+      font-size: 14px;
+      color: var(--color-text-subtle);
       line-height: 1.6;
       margin-bottom: 24px;
     }
@@ -96,38 +126,46 @@
       margin-bottom: 20px;
     }
     .qty-btn {
-      width: 34px;
-      height: 34px;
-      border: 1px solid #cbd5e1;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--color-border);
       background: #ffffff;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 16px;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background 0.15s;
     }
+    .qty-btn:hover { background: #f3f4f6; }
     .qty-val {
-      font-weight: 700;
+      font-weight: 800;
       font-size: 15px;
       min-width: 24px;
       text-align: center;
     }
     .standard-buy-btn {
       width: 100%;
-      padding: 13px;
-      background: #0f172a;
-      color: #ffffff;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 600;
+      padding: 14px;
+      background: #ffffff;
+      color: var(--color-text-main);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-full);
+      font-size: 14.5px;
+      font-weight: 700;
+      font-family: inherit;
       cursor: pointer;
+      transition: background 0.15s;
+    }
+    .standard-buy-btn:hover {
+      background: #f9fafb;
     }
     .or-divider {
       text-align: center;
       position: relative;
-      margin: 14px 0;
+      margin: 16px 0;
     }
     .or-divider::before {
       content: '';
@@ -136,33 +174,39 @@
       top: 50%;
       width: 100%;
       height: 1px;
-      background: #e2e8f0;
+      background: var(--color-border);
     }
     .or-divider span {
       position: relative;
       background: #ffffff;
-      padding: 0 10px;
-      font-size: 12px;
-      color: #94a3b8;
-      font-weight: 600;
+      padding: 0 12px;
+      font-size: 11.5px;
+      color: var(--color-text-subtle);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .sim-card {
-      margin-top: 30px;
-      background: #f8fafc;
-      border: 1px dashed #cbd5e1;
-      border-radius: 12px;
-      padding: 20px;
+      margin-top: 24px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
     }
     .sim-card h4 {
-      font-size: 14px;
-      color: #334155;
-      margin-bottom: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text-main);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .sim-card ul {
       margin-left: 20px;
-      font-size: 13px;
-      color: #64748b;
-      line-height: 1.5;
+      font-size: 13.5px;
+      color: var(--color-text-subtle);
+      line-height: 1.7;
     }
     @media (max-width: 768px) {
       .product-grid { grid-template-columns: 1fr; }
@@ -172,40 +216,47 @@
 <body>
 
   <div class="top-banner">
-    <div><strong>daksh-cod-app.myshopify.com</strong> (Storefront Preview)</div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <i class="bi bi-shop"></i>
+      <span><strong>daksh-cod-app.myshopify.com</strong> &bull; Storefront Preview</span>
+    </div>
     <div>
-      <a href="/dashboard" target="_blank">📊 Open Merchant Funnel Dashboard &rarr;</a>
+      <a href="/dashboard" target="_blank">
+        <i class="bi bi-grid-1x2-fill"></i> Open Dashboard &rarr;
+      </a>
     </div>
   </div>
 
   <div class="store-container">
     <div class="product-grid">
       <div class="product-img-box">
-        🎧
+        <i class="bi bi-headphones"></i>
       </div>
 
       <div class="product-details">
-        <span class="badge">In Stock • Fast Delivery</span>
+        <span class="badge-in-stock">
+          <i class="bi bi-check-circle-fill"></i> In Stock &bull; Cash on Delivery Available
+        </span>
         <h1 class="product-title" id="demo-prod-title">Wireless ANC Headphones Max</h1>
         <div class="product-price" id="demo-prod-price">₹1,499.00</div>
         <p class="product-desc">
-          Experience crystal clear sound and powerful active noise cancellation with 40-hour battery life. Pay comfortably when the package arrives at your doorstep!
+          High-fidelity audio with hybrid active noise cancellation, transparency mode, and 40-hour battery life. Pay comfortably when delivered to your address.
         </p>
 
         <div class="qty-row">
-          <label style="font-size: 13px; font-weight: 600; color: #475569;">Quantity:</label>
+          <label style="font-size: 13px; font-weight: 700; color: var(--color-text-subtle);">Quantity:</label>
           <button type="button" class="qty-btn" id="qty-minus">-</button>
           <span class="qty-val" id="qty-display">1</span>
           <button type="button" class="qty-btn" id="qty-plus">+</button>
         </div>
 
-        <button type="button" class="standard-buy-btn" onclick="alert('Standard Prepaid Shopify Checkout')">
-          Add to Cart (Prepaid)
+        <button type="button" class="standard-buy-btn" onclick="alert('Standard Prepaid Checkout')">
+          Prepaid Checkout
         </button>
 
-        <div class="or-divider"><span>OR BUY WITH 1-CLICK</span></div>
+        <div class="or-divider"><span>OR ONE-CLICK</span></div>
 
-        <!-- The COD Quick Checkout Button -->
+        <!-- The COD Quick Checkout Button (Donezo style) -->
         <button
           type="button"
           class="cod-trigger-btn"
@@ -216,27 +267,26 @@
           data-product-quantity="1"
           data-variant-id="4482910401923"
         >
-          <span>⚡ Cash on Delivery (COD)</span>
+          <i class="bi bi-lightning-charge-fill"></i>
+          <span>Buy with Cash on Delivery (COD)</span>
         </button>
       </div>
     </div>
 
-    <!-- Testing & Edge Cases Guide Box -->
     <div class="sim-card">
-      <h4>🧪 What you can test live on this storefront:</h4>
+      <h4><i class="bi bi-shield-check" style="color: var(--color-primary-green);"></i> Key Verification Features:</h4>
       <ul>
-        <li><strong>Phone Normalization:</strong> Try typing <code>+91 98765 43210</code>, <code>919876543210</code>, or <code>9876543210</code> — automatically formatted to canonical <code>+919876543210</code>.</li>
-        <li><strong>Funnel Event Integrity:</strong> Opening the form 3 times or changing inputs only records 1 distinct session event per step.</li>
-        <li><strong>Pincode Blocklist:</strong> Try entering blocked pincode <code>110006</code> or <code>700001</code> to see real-time blocklist validation.</li>
-        <li><strong>Mock SMS OTP:</strong> Click "Send OTP" to see the server console output and verify using the displayed debug code or <code>000000</code>.</li>
-        <li><strong>Idempotency:</strong> Submissions are locked and guaranteed to create exactly 1 Shopify order.</li>
+        <li><strong>Phone Normalization:</strong> Enter <code>+91 98765 43210</code>, <code>919876543210</code>, or <code>9876543210</code> &rarr; stored canonical <code>+919876543210</code>.</li>
+        <li><strong>Funnel Truthfulness:</strong> Reopening the modal or refreshing never inflates session counts.</li>
+        <li><strong>Idempotency Lock:</strong> Double clicks are intercepted and safely absorbed with 0ms Shopify duplicate overhead.</li>
+        <li><strong>Pincode Blocklist:</strong> Test blocked pincode <code>110006</code> or <code>700001</code> to view instant blocklist warning.</li>
+        <li><strong>Mock SMS OTP:</strong> Click "Send OTP" to receive a 6-digit server-logged verification code.</li>
       </ul>
     </div>
   </div>
 
   <script>
     let qty = 1;
-    const pricePerUnit = 1499;
     const qtyDisplay = document.getElementById('qty-display');
     const codBtn = document.getElementById('cod-quick-buy-btn');
 

@@ -3,699 +3,1196 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shopify COD Order Form - Merchant Dashboard & Idempotency Waterfall</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <title>CODify - Merchant Intelligence & Idempotency Funnel Dashboard</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Bootstrap Icons for crisp vector icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
   <style>
     :root {
-      --primary: #008060;
-      --primary-dark: #004c3f;
-      --primary-light: #f0fdf4;
-      --bg: #f6f6f7;
-      --surface: #ffffff;
-      --text: #202223;
-      --text-subdued: #6d7175;
-      --border: #e1e3e5;
-      --danger: #d72c0d;
-      --danger-bg: #fff4f2;
-      --warning: #b98900;
-      --warning-bg: #fffbeb;
-      --success: #008060;
-      --radius: 10px;
-      --shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.08);
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Donezo Design Tokens */
+      --color-primary-dark: #123326;
+      --color-primary-hover: #0c241b;
+      --color-primary-green: #10b981;
+      --color-accent-mint: #34d399;
+      --color-light-mint: #e8f5e9;
+
+      --color-canvas: #f2f4f3;
+      --color-surface: #ffffff;
+      --color-surface-hover: #f9fafb;
+      --color-border: #e6e8e7;
+      --color-border-subtle: #f0f2f1;
+
+      --color-text-main: #111827;
+      --color-text-subtle: #6b7280;
+      --color-text-muted: #9ca3af;
+
+      --color-status-success-bg: #ecfdf5;
+      --color-status-success-text: #065f46;
+      --color-status-pending-bg: #fffbeb;
+      --color-status-pending-text: #92400e;
+      --color-status-failed-bg: #fef2f2;
+      --color-status-failed-text: #991b1b;
+      --color-status-purple-bg: #f5f3ff;
+      --color-status-purple-text: #5b21b6;
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+      --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.04);
+      --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
+      font-family: var(--font-main);
+      background-color: var(--color-canvas);
+      color: var(--color-text-main);
+      padding: 16px;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
-    .app-header {
-      background: #ffffff;
-      border-bottom: 1px solid var(--border);
-      padding: 16px 28px;
+
+    /* Overall Layout Wrapper */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 20px;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 32px);
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 24px 18px;
       display: flex;
+      flex-direction: column;
       justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--color-border);
     }
-    .logo-area {
+
+    .brand-logo {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      padding: 0 8px 24px;
+      border-bottom: 1px solid var(--color-border-subtle);
     }
-    .badge-cod {
-      background: #e3f1df;
-      color: #008060;
+    .brand-icon-bubble {
+      width: 38px;
+      height: 38px;
+      background: var(--color-primary-dark);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      box-shadow: 0 4px 10px rgba(18, 51, 38, 0.25);
+    }
+    .brand-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--color-text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .nav-section-label {
       font-size: 11px;
       font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
       text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--color-text-muted);
+      margin: 20px 0 10px 12px;
     }
-    .store-badge {
-      font-size: 13px;
-      color: var(--text-subdued);
-      background: #f1f2f3;
-      padding: 4px 10px;
-      border-radius: 6px;
+
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-    .header-actions {
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-subtle);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-decoration: none;
+      position: relative;
+    }
+    .nav-item:hover {
+      background: var(--color-canvas);
+      color: var(--color-text-main);
+    }
+    .nav-item.active {
+      background: var(--color-primary-dark);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(18, 51, 38, 0.2);
+    }
+    .nav-item-left {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .btn {
+    .nav-item i {
+      font-size: 17px;
+    }
+    .nav-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .nav-item.active .nav-badge {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    /* Sidebar Footer Promo Card */
+    .sidebar-footer-card {
+      background: linear-gradient(145deg, #123326 0%, #1e4a38 100%);
+      color: #ffffff;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-top: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .sidebar-footer-card::after {
+      content: '';
+      position: absolute;
+      right: -20px;
+      bottom: -20px;
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .sidebar-footer-card h4 {
+      font-size: 13.5px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .sidebar-footer-card p {
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+    .btn-card-action {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
-      padding: 8px 14px;
-      border-radius: 6px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      backdrop-filter: blur(4px);
+      transition: background 0.15s;
+    }
+    .btn-card-action:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Main Content Area */
+    .main-body {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Top Search & User Header */
+    .top-header {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--color-border);
+    }
+    .search-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--color-canvas);
+      padding: 9px 16px;
+      border-radius: var(--radius-full);
+      width: 380px;
+      border: 1px solid transparent;
+      transition: all 0.18s ease;
+    }
+    .search-pill:focus-within {
+      background: #ffffff;
+      border-color: var(--color-primary-green);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+    .search-pill input {
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 13.5px;
+      font-family: inherit;
+      color: var(--color-text-main);
+      width: 100%;
+    }
+    .kbd-badge {
+      font-size: 11px;
+      background: #ffffff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--color-border);
+      color: var(--color-text-muted);
+      font-weight: 600;
+    }
+
+    .top-header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .icon-btn-round {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--color-canvas);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.15s ease;
+    }
+    .icon-btn-round:hover {
+      background: #e5e7eb;
+      color: var(--color-text-main);
+    }
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 6px 4px 12px;
+      background: var(--color-canvas);
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+    }
+    .user-avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color-primary-dark);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .user-info-meta {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text-main);
+      line-height: 1.2;
+    }
+    .user-sub {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      line-height: 1.2;
+    }
+
+    /* Page Header Section */
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--color-text-main);
+      letter-spacing: -0.7px;
+    }
+    .page-subtitle {
+      font-size: 13.5px;
+      color: var(--color-text-subtle);
+      margin-top: 4px;
+    }
+    .page-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-pill-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-primary-dark);
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--radius-full);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(18, 51, 38, 0.2);
+      transition: all 0.18s ease;
+    }
+    .btn-pill-primary:hover {
+      background: var(--color-primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-pill-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-main);
+      padding: 10px 18px;
+      border-radius: var(--radius-full);
       font-size: 13.5px;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      border: 1px solid transparent;
       transition: all 0.15s ease;
     }
-    .btn-primary {
-      background: var(--primary);
-      color: #ffffff;
-    }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary {
-      background: #ffffff;
-      border-color: #babfc3;
-      color: var(--text);
-    }
-    .btn-secondary:hover { background: #f6f6f7; }
-    .btn-whatsapp {
-      background: #25d366;
-      color: #ffffff;
-      padding: 5px 10px;
-      font-size: 12px;
-      border-radius: 4px;
-    }
-    .btn-whatsapp:hover { background: #1eb954; color: #fff; }
-
-    .main-container {
-      max-width: 1240px;
-      margin: 24px auto;
-      padding: 0 20px;
+    .btn-pill-secondary:hover {
+      background: var(--color-canvas);
     }
 
-    /* Tabs Bar */
-    .tab-bar {
+    /* KPI Bento Stat Cards (4 Grid) */
+    .kpi-bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .kpi-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 22px 20px;
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-card);
       display: flex;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-      gap: 20px;
-      overflow-x: auto;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
     }
-    .tab-item {
-      padding: 12px 4px;
+    .kpi-card.featured-green {
+      background: var(--color-primary-dark);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 8px 24px rgba(18, 51, 38, 0.25);
+    }
+    .kpi-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .kpi-label {
       font-size: 14px;
       font-weight: 600;
-      color: var(--text-subdued);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
+      color: var(--color-text-subtle);
+    }
+    .kpi-card.featured-green .kpi-label {
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .kpi-corner-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--color-border);
+      background: #ffffff;
+      color: var(--color-text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+    .kpi-card.featured-green .kpi-corner-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+    .kpi-value {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+    .kpi-pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      background: var(--color-canvas);
+      color: var(--color-text-subtle);
+      width: fit-content;
+    }
+    .kpi-card.featured-green .kpi-pill-badge {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    /* Bento Cards Grid */
+    .dashboard-bento-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .bento-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-card);
+    }
+    .bento-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .bento-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-main);
       display: flex;
       align-items: center;
       gap: 8px;
-      white-space: nowrap;
-    }
-    .tab-item.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
     }
 
-    /* Cards */
-    .card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      padding: 20px;
-      margin-bottom: 24px;
-    }
-    .card-header {
+    /* Filter Segment */
+    .segmented-control {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-    }
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    /* Range Filter */
-    .filter-group {
-      display: flex;
-      gap: 6px;
-      background: #f1f2f3;
+      background: var(--color-canvas);
       padding: 3px;
-      border-radius: 6px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
     }
-    .filter-btn {
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 600;
+    .segment-btn {
       border: none;
       background: transparent;
-      border-radius: 4px;
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-subtle);
       cursor: pointer;
-      color: var(--text-subdued);
+      transition: all 0.15s ease;
     }
-    .filter-btn.active {
+    .segment-btn.active {
       background: #ffffff;
-      color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      color: var(--color-text-main);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
-    /* Key Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      box-shadow: var(--shadow);
-    }
-    .stat-label {
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-subdued);
-      margin-bottom: 6px;
-    }
-    .stat-value {
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text);
-    }
-    .stat-sub {
-      font-size: 12px;
-      color: var(--text-subdued);
-      margin-top: 4px;
-    }
-
-    /* Funnel Visualization */
-    .funnel-container {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-top: 14px;
-    }
-    .funnel-step-row {
-      display: grid;
-      grid-template-columns: 180px 1fr 160px;
-      align-items: center;
-      gap: 16px;
-      background: #f8fafc;
+    /* Alert Banner (Drop-off alert) */
+    .highlight-card-alert {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
       padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-    .step-name {
-      font-weight: 600;
-      font-size: 13.5px;
-      color: #1e293b;
-    }
-    .bar-track {
-      background: #e2e8f0;
-      height: 22px;
-      border-radius: 4px;
-      overflow: hidden;
-      position: relative;
-    }
-    .bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #008060, #34d399);
-      border-radius: 4px;
-      transition: width 0.4s ease;
-      display: flex;
-      align-items: center;
-      padding-left: 8px;
-      color: #ffffff;
-      font-size: 11.5px;
-      font-weight: 700;
-    }
-    .step-metrics {
-      text-align: right;
-      font-size: 13px;
-    }
-    .metric-count {
-      font-weight: 700;
-      color: #0f172a;
-    }
-    .metric-drop {
-      font-size: 11.5px;
-      color: var(--danger);
-      font-weight: 600;
-    }
-    .metric-conv {
-      font-size: 11.5px;
-      color: var(--success);
-      font-weight: 600;
-    }
-
-    /* Highlight Banner */
-    .alert-banner {
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      border-radius: 8px;
+      font-size: 13px;
       margin-bottom: 20px;
-      font-size: 13.5px;
-    }
-    .alert-banner.warning {
-      background: var(--warning-bg);
-      border: 1px solid #fde68a;
-      color: #92400e;
-    }
-    .alert-banner.info {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1e40af;
     }
 
-    /* Table Styles */
-    .data-table {
+    /* Funnel Modern Bars */
+    .funnel-cylinder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .funnel-cylinder-row {
+      display: grid;
+      grid-template-columns: 190px 1fr 150px;
+      align-items: center;
+      gap: 16px;
+      background: var(--color-canvas);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-subtle);
+    }
+    .cylinder-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--color-text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cylinder-track {
+      background: #e2e8f0;
+      height: 24px;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      position: relative;
+    }
+    .cylinder-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #123326 0%, #10b981 100%);
+      border-radius: var(--radius-full);
+      transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .cylinder-meta {
+      text-align: right;
+      font-size: 12.5px;
+    }
+    .cyl-count {
+      font-weight: 800;
+      color: var(--color-text-main);
+    }
+    .cyl-conv {
+      color: var(--color-primary-green);
+      font-weight: 600;
+      font-size: 11.5px;
+    }
+    .cyl-drop {
+      color: #ef4444;
+      font-weight: 600;
+      font-size: 11.5px;
+    }
+
+    /* Modern Table */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .donezo-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13.5px;
       text-align: left;
     }
-    .data-table th {
-      background: #f8fafc;
-      padding: 12px 14px;
+    .donezo-table th {
+      padding: 14px 16px;
+      background: var(--color-canvas);
+      color: var(--color-text-subtle);
       font-weight: 600;
-      color: var(--text-subdued);
-      border-bottom: 1px solid var(--border);
+      font-size: 12.5px;
+      border-bottom: 1px solid var(--color-border);
     }
-    .data-table td {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
+    .donezo-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--color-border-subtle);
+      color: var(--color-text-main);
     }
-    .data-table tr:hover {
-      background: #f8fafc;
+    .donezo-table tr:hover td {
+      background: var(--color-surface-hover);
     }
-    .badge-status {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 11px;
+
+    /* Pill Badges */
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11.5px;
       font-weight: 700;
     }
-    .badge-status.success { background: #dcfce7; color: #166534; }
-    .badge-status.paid { background: #dbeafe; color: #1e40af; }
-    .badge-status.processing { background: #fef3c7; color: #92400e; }
-    .badge-status.failed { background: #fee2e2; color: #991b1b; }
-    .badge-status.replay { background: #f3e8ff; color: #7e22ce; }
+    .pill-badge.success { background: var(--color-status-success-bg); color: var(--color-status-success-text); }
+    .pill-badge.paid { background: #dbeafe; color: #1e40af; }
+    .pill-badge.pending { background: var(--color-status-pending-bg); color: var(--color-status-pending-text); }
+    .pill-badge.failed { background: var(--color-status-failed-bg); color: var(--color-status-failed-text); }
+    .pill-badge.replay { background: var(--color-status-purple-bg); color: var(--color-status-purple-text); }
 
-    /* Waterfall Timeline View */
-    .waterfall-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
+    .btn-wa-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #25d366;
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s;
     }
-    .waterfall-header {
+    .btn-wa-pill:hover {
+      background: #1eb954;
+      color: #ffffff;
+    }
+
+    /* Waterfall Timeline Node */
+    .waterfall-step-card {
+      background: var(--color-canvas);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      margin-bottom: 16px;
+      border: 1px solid var(--color-border);
+    }
+    .waterfall-step-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
-    .timeline-steps {
+    .waterfall-nodes-container {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      margin-top: 10px;
     }
-    .timeline-node {
+    .waterfall-node-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-size: 13px;
+      gap: 14px;
       background: #ffffff;
-      padding: 10px 14px;
-      border-radius: 6px;
-      border: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border-subtle);
     }
-    .node-icon {
-      width: 26px;
-      height: 26px;
+    .node-icon-circle {
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
     }
-    .node-icon.done { background: #dcfce7; color: #166534; }
-    .node-icon.cached { background: #f3e8ff; color: #7e22ce; }
-    .node-icon.wait { background: #fef3c7; color: #92400e; }
+    .node-icon-circle.done { background: #d1fae5; color: #065f46; }
+    .node-icon-circle.cached { background: #ede9fe; color: #5b21b6; }
 
-    /* Form in Settings */
-    .form-group {
-      margin-bottom: 16px;
+    /* Form Fields in Settings */
+    .form-group-custom {
+      margin-bottom: 20px;
     }
-    .form-group label {
+    .form-label-custom {
       display: block;
       font-size: 13.5px;
-      font-weight: 600;
+      font-weight: 700;
       margin-bottom: 6px;
-      color: var(--text);
+      color: var(--color-text-main);
     }
-    .form-group small {
-      display: block;
-      color: var(--text-subdued);
+    .form-help-custom {
       font-size: 12px;
+      color: var(--color-text-muted);
       margin-top: 4px;
     }
-    .input-control {
+    .input-custom {
       width: 100%;
-      max-width: 400px;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      max-width: 440px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
       font-size: 14px;
+      font-family: inherit;
       outline: none;
+      transition: border-color 0.15s;
     }
-    .input-control:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(0, 128, 96, 0.15);
+    .input-custom:focus {
+      border-color: var(--color-primary-green);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+
+    @media (max-width: 1024px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .kpi-bento-grid { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-bento-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Header -->
-  <header class="app-header">
-    <div class="logo-area">
-      <div style="font-size: 22px;">📦</div>
+  <div class="app-shell">
+
+    <!-- ============================================== -->
+    <!-- 1. DONEZO SIDEBAR NAVIGATION                  -->
+    <!-- ============================================== -->
+    <aside class="sidebar">
       <div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <h2 style="font-size: 16px; font-weight: 700;">COD Order Engine</h2>
-          <span class="badge-cod">Shopify App</span>
+        <div class="brand-logo">
+          <div class="brand-icon-bubble">
+            <i class="bi bi-box-seam-fill"></i>
+          </div>
+          <span class="brand-title">CODify</span>
         </div>
-        <span class="store-badge" id="header-store-name">daksh-cod-app.myshopify.com</span>
-      </div>
-    </div>
-    <div class="header-actions">
-      <a href="/demo" target="_blank" class="btn btn-secondary">
-        <i class="bi bi-shop"></i> View Storefront PDP
-      </a>
-      <button type="button" class="btn btn-primary" onclick="refreshAllData()">
-        <i class="bi bi-arrow-clockwise"></i> Refresh Dashboard
-      </button>
-    </div>
-  </header>
 
-  <main class="main-container">
+        <div class="nav-section-label">Menu</div>
+        <nav class="nav-menu">
+          <div class="nav-item active" onclick="switchTab('funnel')">
+            <div class="nav-item-left">
+              <i class="bi bi-grid-1x2-fill"></i>
+              <span>Dashboard</span>
+            </div>
+          </div>
+          <div class="nav-item" onclick="switchTab('waterfall')">
+            <div class="nav-item-left">
+              <i class="bi bi-diagram-3-fill"></i>
+              <span>Idempotency</span>
+            </div>
+            <span class="nav-badge" style="background: #e0e7ff; color: #3730a3;">Live</span>
+          </div>
+          <div class="nav-item" onclick="switchTab('webhooks')">
+            <div class="nav-item-left">
+              <i class="bi bi-shield-check"></i>
+              <span>HMAC Webhooks</span>
+            </div>
+          </div>
+          <div class="nav-item" onclick="switchTab('leads')">
+            <div class="nav-item-left">
+              <i class="bi bi-telephone-outbound-fill"></i>
+              <span>Recovery Leads</span>
+            </div>
+            <span id="sidebar-lead-badge" class="nav-badge">0</span>
+          </div>
+          <div class="nav-item" onclick="switchTab('orders')">
+            <div class="nav-item-left">
+              <i class="bi bi-bag-check-fill"></i>
+              <span>COD Orders</span>
+            </div>
+          </div>
+        </nav>
 
-    <!-- Navigation Tabs -->
-    <div class="tab-bar">
-      <div class="tab-item active" onclick="switchTab('funnel')">
-        <i class="bi bi-funnel"></i> Funnel Analytics
+        <div class="nav-section-label">General</div>
+        <nav class="nav-menu">
+          <div class="nav-item" onclick="switchTab('settings')">
+            <div class="nav-item-left">
+              <i class="bi bi-sliders"></i>
+              <span>Settings</span>
+            </div>
+          </div>
+          <a href="/demo" target="_blank" class="nav-item">
+            <div class="nav-item-left">
+              <i class="bi bi-shop"></i>
+              <span>Storefront Demo</span>
+            </div>
+            <i class="bi bi-arrow-up-right" style="font-size: 12px;"></i>
+          </a>
+        </nav>
       </div>
-      <div class="tab-item" onclick="switchTab('waterfall')">
-        <i class="bi bi-diagram-3"></i> ⚡ Idempotency Waterfall
+
+      <!-- Footer Help/Store Card -->
+      <div class="sidebar-footer-card">
+        <h4>Connected Store</h4>
+        <p id="sidebar-shop-name">daksh-cod-app.myshopify.com</p>
+        <a href="https://admin.shopify.com/store/daksh-cod-app/orders" target="_blank" class="btn-card-action">
+          <i class="bi bi-box-arrow-up-right"></i> Open Shopify Admin
+        </a>
       </div>
-      <div class="tab-item" onclick="switchTab('webhooks')">
-        <i class="bi bi-shield-check"></i> 🔔 Payment Webhooks (HMAC)
-      </div>
-      <div class="tab-item" onclick="switchTab('leads')">
-        <i class="bi bi-telephone-outbound"></i> Abandoned Leads Recovery
-        <span id="lead-count-badge" style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 10px; font-size: 11px;">0</span>
-      </div>
-      <div class="tab-item" onclick="switchTab('orders')">
-        <i class="bi bi-bag-check"></i> Real COD Orders
-      </div>
-      <div class="tab-item" onclick="switchTab('settings')">
-        <i class="bi bi-sliders"></i> Merchant Settings
-      </div>
-    </div>
+    </aside>
 
     <!-- ============================================== -->
-    <!-- TAB 1: FUNNEL TRACKING & DROP-OFF ANALYTICS   -->
+    <!-- 2. MAIN APPLICATION CONTENT                   -->
     <!-- ============================================== -->
-    <section id="tab-funnel">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total COD Form Sessions</div>
-          <div class="stat-value" id="kpi-sessions">0</div>
-          <div class="stat-sub">Unique customer popup opens</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Confirmed COD Orders</div>
-          <div class="stat-value" id="kpi-orders" style="color: var(--primary);">0</div>
-          <div class="stat-sub">Strictly verified Shopify orders</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">End-to-End Conversion Rate</div>
-          <div class="stat-value" id="kpi-conv">0.0%</div>
-          <div class="stat-sub">Form Open &rarr; Order Placed</div>
-        </div>
-      </div>
+    <main class="main-body">
 
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title">Customer Journey Funnel & Drop-Off Points</h3>
-            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
-              Session-level tracking with truthful deduplication. Refreshes & retries do not inflate counts.
-            </p>
-          </div>
-          <div class="filter-group">
-            <button type="button" class="filter-btn" onclick="changeDateRange('today', this)">Today</button>
-            <button type="button" class="filter-btn active" onclick="changeDateRange('7d', this)">Last 7 Days</button>
-            <button type="button" class="filter-btn" onclick="changeDateRange('30d', this)">Last 30 Days</button>
-          </div>
+      <!-- Top Header Navigation -->
+      <header class="top-header">
+        <div class="search-pill">
+          <i class="bi bi-search" style="color: var(--color-text-muted);"></i>
+          <input type="text" placeholder="Search sessions, orders, or leads..." id="global-search-input" />
+          <span class="kbd-badge">&#8984; F</span>
         </div>
 
-        <div id="biggest-drop-banner" class="alert-banner warning" style="display: none;">
-          <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px;"></i>
-          <div>
-            <strong>Major Drop-Off Alert:</strong>
-            <span id="biggest-drop-text">Calculating funnel drop points...</span>
+        <div class="top-header-right">
+          <button type="button" class="icon-btn-round" title="Refresh Data" onclick="refreshAllData()">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+          <button type="button" class="icon-btn-round" title="Webhooks" onclick="switchTab('webhooks')">
+            <i class="bi bi-bell"></i>
+          </button>
+          <div class="user-profile-badge">
+            <div class="user-avatar-circle">D</div>
+            <div class="user-info-meta">
+              <span class="user-name">Daksh Admin</span>
+              <span class="user-sub">Merchant</span>
+            </div>
           </div>
         </div>
+      </header>
 
-        <div class="funnel-container" id="funnel-steps-list"></div>
-      </div>
-    </section>
-
-    <!-- ============================================== -->
-    <!-- TAB 2: IDEMPOTENCY WATERFALL TRACES            -->
-    <!-- ============================================== -->
-    <section id="tab-waterfall" style="display: none;">
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title">⚡ Idempotency Waterfall & Concurrency Execution Traces</h3>
-            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
-              Live stage-by-stage timeline showing how locks, Shopify API dispatches, and duplicate replays are resolved with zero extra orders.
-            </p>
-          </div>
-          <button type="button" class="btn btn-secondary" onclick="loadIdempotencyTraces()">
-            <i class="bi bi-arrow-clockwise"></i> Refresh Traces
+      <!-- Dynamic Page Heading & CTA Buttons -->
+      <div class="page-title-row">
+        <div>
+          <h1 class="page-title" id="main-page-heading">Dashboard</h1>
+          <p class="page-subtitle" id="main-page-subheading">Track, analyze, and optimize your COD checkout conversions with absolute truthfulness.</p>
+        </div>
+        <div class="page-actions-group">
+          <a href="/demo" target="_blank" class="btn-pill-primary">
+            <i class="bi bi-bag-plus-fill"></i> + Test Storefront Form
+          </a>
+          <button type="button" class="btn-pill-secondary" onclick="refreshAllData()">
+            <i class="bi bi-arrow-repeat"></i> Refresh
           </button>
         </div>
-
-        <div class="alert-banner info">
-          <i class="bi bi-info-circle-fill" style="font-size: 18px;"></i>
-          <div>
-            <strong>How our Idempotency Engine protects the merchant:</strong>
-            Each checkout attempt is bound to a unique <code>idempotency_key</code>. Duplicate taps, network retries, or concurrent clicks hit the cache (<code>0ms</code> Shopify overhead) and replay the existing order payload without creating duplicates.
-          </div>
-        </div>
-
-        <div id="waterfall-traces-list">
-          <div style="text-align: center; color: var(--text-subdued); padding: 24px;">Loading waterfall traces...</div>
-        </div>
       </div>
-    </section>
 
-    <!-- ============================================== -->
-    <!-- TAB 3: PAYMENT WEBHOOKS (HMAC-SHA256)          -->
-    <!-- ============================================== -->
-    <section id="tab-webhooks" style="display: none;">
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title">🔔 Shopify Payment Webhooks (HMAC-SHA256 Verified)</h3>
-            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
-              Secure payment webhook ingestion verifying cryptographic signature <code>X-Shopify-Hmac-Sha256</code> with <code>crypto.timingSafeEqual</code>.
-            </p>
+      <!-- ============================================== -->
+      <!-- SECTION 1: DASHBOARD & FUNNEL VIEW             -->
+      <!-- ============================================== -->
+      <section id="tab-funnel">
+        <!-- 4 Bento KPI Cards -->
+        <div class="kpi-bento-grid" style="margin-bottom: 20px;">
+          <div class="kpi-card featured-green">
+            <div class="kpi-card-top">
+              <span class="kpi-label">Total Form Sessions</span>
+              <div class="kpi-corner-btn"><i class="bi bi-arrow-up-right"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-sessions">0</div>
+            <span class="kpi-pill-badge"><i class="bi bi-check-circle-fill"></i> Distinct customer sessions</span>
           </div>
-          <button type="button" class="btn btn-primary" onclick="triggerTestHmacWebhook()">
-            <i class="bi bi-send-check"></i> ⚡ Send Test HMAC Webhook
-          </button>
-        </div>
 
-        <div id="webhook-test-feedback" style="display: none; margin-bottom: 16px;" class="alert-banner info">
-          <i class="bi bi-check-circle-fill"></i>
-          <span id="webhook-test-msg">Simulated webhook processed</span>
-        </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <span class="kpi-label">Confirmed Orders</span>
+              <div class="kpi-corner-btn"><i class="bi bi-arrow-up-right"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-orders" style="color: var(--color-primary-dark);">0</div>
+            <span class="kpi-pill-badge"><i class="bi bi-shield-fill-check"></i> Strictly verified Shopify orders</span>
+          </div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Webhook ID</th>
-              <th>Topic</th>
-              <th>Shopify Order ID</th>
-              <th>HMAC Status</th>
-              <th>Processing Status</th>
-              <th>Received At</th>
-            </tr>
-          </thead>
-          <tbody id="webhooks-tbody">
-            <tr><td colspan="6" style="text-align: center; color: var(--text-subdued);">No webhooks received yet.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <span class="kpi-label">Funnel Conversion Rate</span>
+              <div class="kpi-corner-btn"><i class="bi bi-arrow-up-right"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-conv">0.0%</div>
+            <span class="kpi-pill-badge"><i class="bi bi-graph-up-arrow"></i> End-to-end checkout rate</span>
+          </div>
 
-    <!-- ============================================== -->
-    <!-- TAB 4: ABANDONED LEADS & RECOVERY HUB          -->
-    <!-- ============================================== -->
-    <section id="tab-leads" style="display: none;">
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title">Abandoned Leads (Phone Captured)</h3>
-            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
-              Customers who entered a valid phone number but dropped off before completing the order. Recover them via 1-Click WhatsApp!
-            </p>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <span class="kpi-label">Abandoned Leads</span>
+              <div class="kpi-corner-btn"><i class="bi bi-arrow-up-right"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-leads-count" style="color: #d97706;">0</div>
+            <span class="kpi-pill-badge"><i class="bi bi-telephone-fill"></i> Recoverable via WhatsApp</span>
           </div>
         </div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Customer Name</th>
-              <th>Phone Number</th>
-              <th>Last Step Reached</th>
-              <th>Pincode / Location</th>
-              <th>Cart Value</th>
-              <th>Time</th>
-              <th>1-Click Recovery Action</th>
-            </tr>
-          </thead>
-          <tbody id="abandoned-leads-tbody">
-            <tr><td colspan="7" style="text-align: center; color: var(--text-subdued);">No abandoned leads captured yet.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+        <!-- Bento Layout: Funnel + Quick Recovery Box -->
+        <div class="dashboard-bento-layout">
+          <div class="bento-card">
+            <div class="bento-card-header">
+              <div class="bento-card-title">
+                <i class="bi bi-funnel-fill" style="color: var(--color-primary-green);"></i>
+                <span>Customer Journey Funnel</span>
+              </div>
+              <div class="segmented-control">
+                <button type="button" class="segment-btn" onclick="changeDateRange('today', this)">Today</button>
+                <button type="button" class="segment-btn active" onclick="changeDateRange('7d', this)">Last 7 Days</button>
+                <button type="button" class="segment-btn" onclick="changeDateRange('30d', this)">Last 30 Days</button>
+              </div>
+            </div>
 
-    <!-- ============================================== -->
-    <!-- TAB 5: REAL COD ORDERS                         -->
-    <!-- ============================================== -->
-    <section id="tab-orders" style="display: none;">
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title">Real COD Orders Placed via App</h3>
-            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
-              All orders are tagged <code>COD-Form</code> with pending payment status and idempotency protection.
-            </p>
+            <div id="biggest-drop-banner" class="highlight-card-alert" style="display: none;">
+              <i class="bi bi-exclamation-triangle-fill" style="font-size: 16px;"></i>
+              <span id="biggest-drop-text">Calculating major drop point...</span>
+            </div>
+
+            <div class="funnel-cylinder-list" id="funnel-steps-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Side Quick Lead Recovery Panel -->
+          <div class="bento-card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="bento-card-header" style="margin-bottom: 14px;">
+                <div class="bento-card-title">
+                  <i class="bi bi-whatsapp" style="color: #25d366;"></i>
+                  <span>1-Click Lead Recovery</span>
+                </div>
+              </div>
+              <p style="font-size: 12.5px; color: var(--color-text-subtle); line-height: 1.5; margin-bottom: 16px;">
+                Customers who entered their phone number but dropped off before completing order submission.
+              </p>
+              <div id="side-leads-preview" style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 20px;">No dropped leads yet.</div>
+              </div>
+            </div>
+            <button type="button" class="btn-pill-secondary" style="width: 100%; justify-content: center; margin-top: 16px;" onclick="switchTab('leads')">
+              View All Recovery Leads &rarr;
+            </button>
           </div>
         </div>
+      </section>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Order Number</th>
-              <th>Status</th>
-              <th>Customer</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Total Amount</th>
-              <th>COD Fee</th>
-              <th>Date & Time</th>
-              <th>Shopify Admin</th>
-            </tr>
-          </thead>
-          <tbody id="orders-tbody">
-            <tr><td colspan="9" style="text-align: center; color: var(--text-subdued);">No orders placed yet.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <!-- ============================================== -->
+      <!-- SECTION 2: IDEMPOTENCY WATERFALL               -->
+      <!-- ============================================== -->
+      <section id="tab-waterfall" style="display: none;">
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <div>
+              <div class="bento-card-title">
+                <i class="bi bi-diagram-3-fill" style="color: var(--color-primary-green);"></i>
+                <span>Idempotency Waterfall & Concurrency Trace Stream</span>
+              </div>
+              <p style="font-size: 13px; color: var(--color-text-subtle); margin-top: 3px;">
+                Live execution timeline demonstrating how database locks, atomic state transitions, and duplicate replays are resolved with zero duplicate orders.
+              </p>
+            </div>
+            <button type="button" class="btn-pill-secondary" onclick="loadIdempotencyTraces()">
+              <i class="bi bi-arrow-clockwise"></i> Refresh Traces
+            </button>
+          </div>
 
-    <!-- ============================================== -->
-    <!-- TAB 6: MERCHANT SETTINGS                       -->
-    <!-- ============================================== -->
-    <section id="tab-settings" style="display: none;">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">COD Behavior & Business Rules</h3>
+          <div id="waterfall-traces-list">
+            <div style="text-align: center; color: var(--color-text-muted); padding: 32px;">Loading waterfall traces...</div>
+          </div>
         </div>
+      </section>
 
-        <form id="settings-form" onsubmit="saveSettings(event)">
-          <div class="form-group">
-            <label for="setting-cod-fee">Extra COD Handling Fee (INR)</label>
-            <input type="number" id="setting-cod-fee" class="input-control" step="1" min="0" placeholder="e.g. 49" value="49" />
-            <small>Added as a shipping convenience fee to the order total on storefront.</small>
+      <!-- ============================================== -->
+      <!-- SECTION 3: HMAC PAYMENT WEBHOOKS               -->
+      <!-- ============================================== -->
+      <section id="tab-webhooks" style="display: none;">
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <div>
+              <div class="bento-card-title">
+                <i class="bi bi-shield-lock-fill" style="color: var(--color-primary-green);"></i>
+                <span>Shopify Payment Webhooks (HMAC-SHA256 Cryptographic Audit)</span>
+              </div>
+              <p style="font-size: 13px; color: var(--color-text-subtle); margin-top: 3px;">
+                Ingests webhook notifications securely verifying <code>X-Shopify-Hmac-Sha256</code> signatures using <code>crypto.timingSafeEqual</code>.
+              </p>
+            </div>
+            <button type="button" class="btn-pill-primary" onclick="triggerTestHmacWebhook()">
+              <i class="bi bi-send-check-fill"></i> Test HMAC Webhook
+            </button>
           </div>
 
-          <div class="form-group">
-            <label for="setting-pincode-blocklist">Pincode Blocklist (Comma-separated)</label>
-            <input type="text" id="setting-pincode-blocklist" class="input-control" placeholder="e.g. 110006, 700001, 800001" />
-            <small>Disables COD or shows validation warning if customer enters any of these pincodes.</small>
+          <div id="webhook-test-feedback" class="highlight-card-alert" style="display: none; background: #ecfdf5; border-color: #a7f3d0; color: #065f46;">
+            <i class="bi bi-check-circle-fill"></i>
+            <span id="webhook-test-msg">Simulated webhook processed</span>
           </div>
 
-          <div class="form-group">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="checkbox" id="setting-require-otp" checked style="width: 18px; height: 18px;" />
-              <span>Enable Mock SMS OTP Verification before order confirmation</span>
-            </label>
-            <small>Logs verification code server-side and enforces verification on storefront.</small>
+          <div class="table-container">
+            <table class="donezo-table">
+              <thead>
+                <tr>
+                  <th>Webhook ID</th>
+                  <th>Topic</th>
+                  <th>Shopify Order ID</th>
+                  <th>HMAC Verification</th>
+                  <th>Status</th>
+                  <th>Received Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="webhooks-tbody">
+                <tr><td colspan="6" style="text-align: center; color: var(--color-text-muted); padding: 24px;">No webhooks logged yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SECTION 4: ABANDONED LEADS RECOVERY            -->
+      <!-- ============================================== -->
+      <section id="tab-leads" style="display: none;">
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <div>
+              <div class="bento-card-title">
+                <i class="bi bi-telephone-outbound-fill" style="color: var(--color-primary-green);"></i>
+                <span>Captured Leads & 1-Click WhatsApp Recovery Hub</span>
+              </div>
+              <p style="font-size: 13px; color: var(--color-text-subtle); margin-top: 3px;">
+                Customers who entered phone details but abandoned prior to order placement.
+              </p>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="setting-order-tag">Shopify Order Tag</label>
-            <input type="text" id="setting-order-tag" class="input-control" value="COD-Form" />
-            <small>Tag attached to all orders created by this app in Shopify Admin.</small>
+          <div class="table-container">
+            <table class="donezo-table">
+              <thead>
+                <tr>
+                  <th>Customer Name</th>
+                  <th>Phone Number</th>
+                  <th>Last Step Reached</th>
+                  <th>Pincode / City</th>
+                  <th>Cart Value</th>
+                  <th>Dropped At</th>
+                  <th>Recovery Action</th>
+                </tr>
+              </thead>
+              <tbody id="abandoned-leads-tbody">
+                <tr><td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 24px;">No abandoned leads captured yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SECTION 5: REAL COD ORDERS                     -->
+      <!-- ============================================== -->
+      <section id="tab-orders" style="display: none;">
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <div>
+              <div class="bento-card-title">
+                <i class="bi bi-bag-check-fill" style="color: var(--color-primary-green);"></i>
+                <span>Real COD Orders</span>
+              </div>
+              <p style="font-size: 13px; color: var(--color-text-subtle); margin-top: 3px;">
+                Orders created via the COD Form with <code>financial_status: 'pending'</code> and tag <code>COD-Form</code>.
+              </p>
+            </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" id="save-settings-btn">
-            Save Merchant Settings
-          </button>
-          <span id="settings-save-status" style="margin-left: 12px; font-size: 13px; font-weight: 600; color: var(--primary);"></span>
-        </form>
-      </div>
-    </section>
+          <div class="table-container">
+            <table class="donezo-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Status</th>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Shipping Address</th>
+                  <th>Total Amount</th>
+                  <th>COD Handling Fee</th>
+                  <th>Created At</th>
+                  <th>Shopify Admin</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody">
+                <tr><td colspan="9" style="text-align: center; color: var(--color-text-muted); padding: 24px;">No orders placed yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-  </main>
+      <!-- ============================================== -->
+      <!-- SECTION 6: MERCHANT SETTINGS                   -->
+      <!-- ============================================== -->
+      <section id="tab-settings" style="display: none;">
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <div class="bento-card-title">
+              <i class="bi bi-sliders" style="color: var(--color-primary-green);"></i>
+              <span>Merchant Behavior & Business Rules</span>
+            </div>
+          </div>
 
+          <form id="settings-form" onsubmit="saveSettings(event)" style="max-width: 600px;">
+            <div class="form-group-custom">
+              <label class="form-label-custom" for="setting-cod-fee">Extra COD Handling Fee (INR)</label>
+              <input type="number" id="setting-cod-fee" class="input-custom" step="1" min="0" value="49" />
+              <div class="form-help-custom">Added as a shipping convenience line item to order totals on the storefront.</div>
+            </div>
+
+            <div class="form-group-custom">
+              <label class="form-label-custom" for="setting-pincode-blocklist">Pincode Blocklist (Comma-separated)</label>
+              <input type="text" id="setting-pincode-blocklist" class="input-custom" placeholder="e.g. 110006, 700001, 800001" />
+              <div class="form-help-custom">Blocks COD orders in real-time when customer enters these pincodes.</div>
+            </div>
+
+            <div class="form-group-custom">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="setting-require-otp" checked style="width: 18px; height: 18px; accent-color: var(--color-primary-green);" />
+                <span style="font-weight: 700; font-size: 14px;">Enforce SMS OTP Verification before order confirmation</span>
+              </label>
+              <div class="form-help-custom">Logs mock SMS code server-side and requires verification on storefront.</div>
+            </div>
+
+            <div class="form-group-custom">
+              <label class="form-label-custom" for="setting-order-tag">Shopify Order Tag</label>
+              <input type="text" id="setting-order-tag" class="input-custom" value="COD-Form" />
+            </div>
+
+            <button type="submit" class="btn-pill-primary" id="save-settings-btn">
+              <i class="bi bi-check2"></i> Save Settings
+            </button>
+            <span id="settings-save-status" style="margin-left: 12px; font-size: 13px; font-weight: 700; color: var(--color-primary-green);"></span>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Global Dashboard Scripts -->
   <script>
     let currentRange = '7d';
 
     function switchTab(tabName) {
-      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+      document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
 
-      const activeTabEl = Array.from(document.querySelectorAll('.tab-item')).find(t => t.textContent.toLowerCase().includes(tabName));
-      if (activeTabEl) activeTabEl.classList.add('active');
+      // Update active nav
+      const activeNavs = Array.from(document.querySelectorAll('.nav-item')).filter(t => t.textContent.toLowerCase().includes(tabName.toLowerCase()));
+      if (activeNavs.length > 0) activeNavs[0].classList.add('active');
 
       const targetSection = document.getElementById(`tab-${tabName}`);
       if (targetSection) targetSection.style.display = 'block';
+
+      // Update Title
+      const titles = {
+        funnel: { title: 'Dashboard', sub: 'Track, analyze, and optimize your COD checkout conversions with absolute truthfulness.' },
+        waterfall: { title: 'Idempotency Waterfall', sub: 'Stage-by-stage concurrency locks and 0ms duplicate cache hit audit stream.' },
+        webhooks: { title: 'Payment Webhooks', sub: 'HMAC-SHA256 cryptographic verification audit for external payment updates.' },
+        leads: { title: 'Recovery Leads Hub', sub: 'Captured customer leads with 1-click WhatsApp deep-links.' },
+        orders: { title: 'COD Orders List', sub: 'Live Shopify orders tagged COD-Form created via storefront form.' },
+        settings: { title: 'Merchant Settings', sub: 'Configure COD handling fee, pincode blocklist, and SMS OTP verification.' },
+      };
+
+      if (titles[tabName]) {
+        document.getElementById('main-page-heading').textContent = titles[tabName].title;
+        document.getElementById('main-page-subheading').textContent = titles[tabName].sub;
+      }
 
       if (tabName === 'funnel') loadFunnelData();
       if (tabName === 'waterfall') loadIdempotencyTraces();
@@ -707,7 +1204,7 @@
 
     function changeDateRange(range, btn) {
       currentRange = range;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       loadFunnelData();
     }
@@ -725,7 +1222,7 @@
         if (data.biggestDropPoint && data.biggestDropPoint.dropCount > 0) {
           dropBanner.style.display = 'flex';
           document.getElementById('biggest-drop-text').textContent =
-            `Biggest customer drop point is between ${data.biggestDropPoint.previousStep} → ${data.biggestDropPoint.step} (${data.biggestDropPoint.dropCount} drop-offs, ${data.biggestDropPoint.dropPercent}% drop rate).`;
+            `Major drop point: ${data.biggestDropPoint.previousStep} → ${data.biggestDropPoint.step} (${data.biggestDropPoint.dropCount} drop-offs, ${data.biggestDropPoint.dropPercent}% drop-off rate).`;
         } else {
           dropBanner.style.display = 'none';
         }
@@ -738,19 +1235,22 @@
         data.funnel.forEach((item, index) => {
           const percentOfTotal = Math.round((item.count / maxCount) * 100);
           const row = document.createElement('div');
-          row.className = 'funnel-step-row';
+          row.className = 'funnel-cylinder-row';
 
           row.innerHTML = `
-            <div class="step-name">${item.displayName}</div>
-            <div class="bar-track">
-              <div class="bar-fill" style="width: ${Math.max(percentOfTotal, 4)}%;">
-                ${percentOfTotal > 10 ? percentOfTotal + '%' : ''}
+            <div class="cylinder-title">
+              <i class="bi bi-circle-fill" style="font-size: 8px; color: var(--color-primary-green);"></i>
+              <span>${item.displayName}</span>
+            </div>
+            <div class="cylinder-track">
+              <div class="cylinder-bar" style="width: ${Math.max(percentOfTotal, 5)}%;">
+                ${percentOfTotal > 12 ? percentOfTotal + '%' : ''}
               </div>
             </div>
-            <div class="step-metrics">
-              <div class="metric-count">${item.count} sessions</div>
-              ${index > 0 ? `<div class="metric-conv">Step Conv: ${item.conversionFromPrevious}%</div>` : ''}
-              ${index > 0 && item.dropCount > 0 ? `<div class="metric-drop">-${item.dropCount} drop (${item.dropOffFromPrevious}%)</div>` : ''}
+            <div class="cylinder-meta">
+              <div class="cyl-count">${item.count} sessions</div>
+              ${index > 0 ? `<div class="cyl-conv">Step Conv: ${item.conversionFromPrevious}%</div>` : ''}
+              ${index > 0 && item.dropCount > 0 ? `<div class="cyl-drop">-${item.dropCount} drop (${item.dropOffFromPrevious}%)</div>` : ''}
             </div>
           `;
           stepsContainer.appendChild(row);
@@ -767,42 +1267,42 @@
         const container = document.getElementById('waterfall-traces-list');
 
         if (!data.traces || data.traces.length === 0) {
-          container.innerHTML = `<div style="text-align: center; color: var(--text-subdued); padding: 24px;">No order idempotency traces recorded yet. Place an order on <a href="/demo" target="_blank">Storefront PDP</a> to see the live waterfall!</div>`;
+          container.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); padding: 32px;">No idempotency traces recorded yet. Place an order on the <a href="/demo" target="_blank" style="color: var(--color-primary-green); font-weight: 700;">Storefront PDP</a> to view live waterfall traces!</div>`;
           return;
         }
 
         container.innerHTML = data.traces.map(trace => {
-          const badgeClass = trace.hasDuplicateReplay ? 'replay' : (trace.finalStatus === 'COMMITTED' || trace.finalStatus === 'REPLAY_SUCCESS' ? 'success' : 'processing');
+          const badgeClass = trace.hasDuplicateReplay ? 'replay' : (trace.finalStatus === 'COMMITTED' || trace.finalStatus === 'REPLAY_SUCCESS' ? 'success' : 'pending');
           return `
-            <div class="waterfall-card">
-              <div class="waterfall-header">
+            <div class="waterfall-step-card">
+              <div class="waterfall-step-header">
                 <div>
-                  <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #0f172a;">${trace.idempotencyKey}</span>
-                  <span class="badge-status ${badgeClass}" style="margin-left: 8px;">
-                    ${trace.hasDuplicateReplay ? 'DUPLICATE ABSORPTION DETECTED' : trace.finalStatus}
+                  <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--color-text-main);">${trace.idempotencyKey}</span>
+                  <span class="pill-badge ${badgeClass}" style="margin-left: 10px;">
+                    ${trace.hasDuplicateReplay ? 'DUPLICATE ABSORPTION (0ms API OVERHEAD)' : trace.finalStatus}
                   </span>
                 </div>
-                <div style="font-size: 12px; color: var(--text-subdued);">
-                  Total Duration: <strong>${trace.totalDurationMs}ms</strong> • ${new Date(trace.startedAt).toLocaleTimeString()}
+                <div style="font-size: 12px; color: var(--color-text-subtle);">
+                  Total Latency: <strong>${trace.totalDurationMs}ms</strong> • ${new Date(trace.startedAt).toLocaleTimeString()}
                 </div>
               </div>
 
-              <div class="timeline-steps">
+              <div class="waterfall-nodes-container">
                 ${trace.traces.map(t => {
                   const isCached = t.stepName.includes('DUPLICATE') || t.stepName.includes('REPLAY');
                   const iconClass = isCached ? 'cached' : 'done';
-                  const iconSymbol = isCached ? '⚡' : '✓';
+                  const iconSymbol = isCached ? '<i class="bi bi-lightning-charge-fill"></i>' : '<i class="bi bi-check-lg"></i>';
                   return `
-                    <div class="timeline-node">
-                      <div class="node-icon ${iconClass}">${iconSymbol}</div>
+                    <div class="waterfall-node-item">
+                      <div class="node-icon-circle ${iconClass}">${iconSymbol}</div>
                       <div style="flex: 1;">
-                        <strong>${t.stepName}</strong>
-                        <span style="color: var(--text-subdued); font-size: 11.5px; margin-left: 8px;">(${t.durationMs}ms)</span>
-                        <div style="font-size: 12px; color: #475569; margin-top: 2px;">
+                        <strong style="font-size: 13px;">${t.stepName}</strong>
+                        <span style="color: var(--color-text-muted); font-size: 11.5px; margin-left: 8px;">(${t.durationMs}ms)</span>
+                        <div style="font-size: 12px; color: var(--color-text-subtle); font-family: var(--font-mono); margin-top: 3px;">
                           ${JSON.stringify(t.details)}
                         </div>
                       </div>
-                      <div style="font-size: 11px; color: #94a3b8;">${new Date(t.timestamp).toLocaleTimeString()}</div>
+                      <div style="font-size: 11px; color: var(--color-text-muted);">${new Date(t.timestamp).toLocaleTimeString()}</div>
                     </div>
                   `;
                 }).join('')}
@@ -822,22 +1322,22 @@
         const tbody = document.getElementById('webhooks-tbody');
 
         if (!data.webhooks || data.webhooks.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-subdued); padding: 24px;">No webhooks received yet. Click "Send Test HMAC Webhook" to test!</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--color-text-muted); padding: 28px;">No webhooks received yet. Click "Test HMAC Webhook" above!</td></tr>`;
           return;
         }
 
         tbody.innerHTML = data.webhooks.map(w => `
           <tr>
-            <td><code style="font-size: 11.5px;">${w.id.substring(0, 13)}...</code></td>
+            <td><code style="font-family: var(--font-mono); font-size: 12px;">${w.id.substring(0, 14)}...</code></td>
             <td><strong>${w.topic}</strong></td>
-            <td><code>${w.shopifyOrderId}</code></td>
+            <td><code style="font-family: var(--font-mono); font-size: 12px;">${w.shopifyOrderId}</code></td>
             <td>
-              <span class="badge-status ${w.hmacValid ? 'success' : 'failed'}">
-                ${w.hmacValid ? '✓ Valid HMAC-SHA256' : '✗ Invalid Signature'}
+              <span class="pill-badge ${w.hmacValid ? 'success' : 'failed'}">
+                ${w.hmacValid ? '<i class="bi bi-shield-check"></i> Valid HMAC-SHA256' : '<i class="bi bi-x-circle"></i> Invalid Signature'}
               </span>
             </td>
-            <td><span class="badge-status ${w.status === 'PROCESSED' ? 'paid' : 'failed'}">${w.status}</span></td>
-            <td style="font-size: 12px; color: var(--text-subdued);">${w.createdAt}</td>
+            <td><span class="pill-badge ${w.status === 'PROCESSED' ? 'paid' : 'failed'}">${w.status}</span></td>
+            <td style="font-size: 12px; color: var(--color-text-subtle);">${w.createdAt}</td>
           </tr>
         `).join('');
       } catch (err) {
@@ -850,13 +1350,13 @@
         const res = await fetch('/api/webhooks/test-trigger', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: 1548, customerName: 'Test Webhook Customer' })
+          body: JSON.stringify({ amount: 1548, customerName: 'Simulated Customer' })
         });
         const data = await res.json();
         const banner = document.getElementById('webhook-test-feedback');
         banner.style.display = 'flex';
         document.getElementById('webhook-test-msg').textContent =
-          `Success: Test HMAC-SHA256 Webhook dispatched & verified (HMAC: ${data.hmacHeaderGenerated.substring(0, 20)}...)`;
+          `Success: Webhook signature verified using HMAC-SHA256 (Hash: ${data.hmacHeaderGenerated.substring(0, 24)}...)`;
         loadWebhooks();
         loadOrders();
       } catch (err) {
@@ -869,23 +1369,41 @@
         const res = await fetch('/api/dashboard/abandoned');
         const data = await res.json();
         const tbody = document.getElementById('abandoned-leads-tbody');
-        document.getElementById('lead-count-badge').textContent = data.abandonedLeads.length;
+        const count = data.abandonedLeads ? data.abandonedLeads.length : 0;
+
+        document.getElementById('sidebar-lead-badge').textContent = count;
+        document.getElementById('kpi-leads-count').textContent = count;
+
+        const sidePreview = document.getElementById('side-leads-preview');
+        if (count > 0) {
+          sidePreview.innerHTML = data.abandonedLeads.slice(0, 3).map(l => `
+            <div style="background: var(--color-canvas); padding: 10px 12px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="font-size: 12.5px;">${l.customerName}</strong>
+                <div style="font-size: 11px; color: var(--color-text-muted);">${l.customerPhone}</div>
+              </div>
+              <a href="${l.whatsappUrl}" target="_blank" class="btn-wa-pill" style="padding: 4px 10px; font-size: 11px;">
+                <i class="bi bi-whatsapp"></i> Chat
+              </a>
+            </div>
+          `).join('');
+        }
 
         if (!data.abandonedLeads || data.abandonedLeads.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-subdued); padding: 24px;">No abandoned leads captured yet.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 28px;">No abandoned leads captured yet.</td></tr>`;
           return;
         }
 
         tbody.innerHTML = data.abandonedLeads.map(lead => `
           <tr>
             <td><strong>${lead.customerName}</strong></td>
-            <td><code>${lead.customerPhone}</code></td>
-            <td><span class="badge-status processing">${lead.lastStepDisplay}</span></td>
+            <td><code style="font-family: var(--font-mono); font-size: 12.5px;">${lead.customerPhone}</code></td>
+            <td><span class="pill-badge pending">${lead.lastStepDisplay}</span></td>
             <td>${lead.city || ''} ${lead.pincode !== 'N/A' ? '(' + lead.pincode + ')' : ''}</td>
             <td><strong>${lead.cartTotal}</strong></td>
-            <td style="font-size: 12px; color: var(--text-subdued);">${lead.abandonedAt}</td>
+            <td style="font-size: 12px; color: var(--color-text-subtle);">${lead.abandonedAt}</td>
             <td>
-              <a href="${lead.whatsappUrl}" target="_blank" class="btn btn-whatsapp">
+              <a href="${lead.whatsappUrl}" target="_blank" class="btn-wa-pill">
                 <i class="bi bi-whatsapp"></i> Recover via WhatsApp
               </a>
             </td>
@@ -903,22 +1421,22 @@
         const tbody = document.getElementById('orders-tbody');
 
         if (!data.orders || data.orders.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-subdued); padding: 24px;">No orders placed yet.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--color-text-muted); padding: 28px;">No orders placed yet.</td></tr>`;
           return;
         }
 
         tbody.innerHTML = data.orders.map(o => `
           <tr>
             <td><strong>${o.orderNumber}</strong></td>
-            <td><span class="badge-status ${o.status.toLowerCase()}">${o.status}</span></td>
+            <td><span class="pill-badge ${o.status.toLowerCase()}">${o.status}</span></td>
             <td>${o.customerName}</td>
-            <td><code>${o.customerPhone}</code></td>
+            <td><code style="font-family: var(--font-mono); font-size: 12px;">${o.customerPhone}</code></td>
             <td style="font-size: 12px;">${o.addressSummary}</td>
             <td><strong>${o.totalPrice}</strong></td>
             <td>${o.codFee}</td>
-            <td style="font-size: 12px; color: var(--text-subdued);">${o.createdAt}</td>
+            <td style="font-size: 12px; color: var(--color-text-subtle);">${o.createdAt}</td>
             <td>
-              ${o.adminLink ? `<a href="${o.adminLink}" target="_blank" class="btn btn-secondary" style="padding: 3px 8px; font-size: 11.5px;">View in Admin &rarr;</a>` : `<span style="font-size: 11px; color: #64748b;">Sandbox Created</span>`}
+              ${o.adminLink ? `<a href="${o.adminLink}" target="_blank" class="btn-pill-secondary" style="padding: 4px 10px; font-size: 11.5px;">Admin <i class="bi bi-box-arrow-up-right"></i></a>` : `<span style="font-size: 11px; color: var(--color-text-muted);">Sandbox</span>`}
             </td>
           </tr>
         `).join('');
@@ -962,11 +1480,11 @@
         });
         const data = await res.json();
         if (data.success) {
-          statusEl.textContent = '✓ Settings updated successfully!';
+          statusEl.textContent = '✓ Saved successfully!';
           setTimeout(() => { statusEl.textContent = ''; }, 3000);
         }
       } catch (err) {
-        statusEl.textContent = '❌ Failed to save settings';
+        statusEl.textContent = 'Failed to save settings';
       }
     }
 
