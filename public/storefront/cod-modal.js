@@ -158,22 +158,6 @@
               <input type="text" id="cod-state" class="cod-input" placeholder="e.g. Maharashtra" required />
             </div>
 
-            <!-- Step 3: Mock OTP Verification (if enabled) -->
-            <div id="cod-otp-container" class="cod-otp-box" style="display: none;">
-              <div style="font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                <i class="bi bi-shield-check" style="color: #10b981;"></i> SMS OTP Verification
-              </div>
-              <div style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">A 6-digit verification code will be sent to your mobile.</div>
-              <div id="cod-otp-action-row" style="display: flex; gap: 8px;">
-                <button type="button" id="cod-send-otp-btn" class="cod-btn-secondary">Send OTP Code</button>
-              </div>
-              <div id="cod-otp-verify-row" style="display: none; margin-top: 10px; gap: 8px;">
-                <input type="text" id="cod-otp-input" class="cod-input" placeholder="Enter OTP" style="max-width: 150px;" maxlength="6" />
-                <button type="button" id="cod-verify-otp-btn" class="cod-btn-secondary" style="background: #123326; color: #fff; border-color: #123326;">Verify</button>
-              </div>
-              <div id="cod-otp-hint" style="font-size: 12px; color: #0284c7; margin-top: 8px; font-weight: 600; display: none;"></div>
-            </div>
-
             <!-- Summary & Pricing -->
             <div class="cod-price-summary">
               <div class="cod-summary-row">
@@ -329,75 +313,7 @@
       }
     }
 
-    // 3. Mock OTP Handlers
-    if (sendOtpBtn) {
-      sendOtpBtn.addEventListener('click', async () => {
-        const phoneRes = validateAndNormalizePhone(phoneInput.value);
-        if (!phoneRes.isValid) {
-          showAlert('Please enter a valid 10-digit mobile number first.', 'error');
-          return;
-        }
-
-        sendOtpBtn.disabled = true;
-        sendOtpBtn.textContent = 'Sending...';
-
-        const res = await apiCall('/api/cod/otp/send', 'POST', {
-          phone: phoneRes.canonical,
-          sessionId,
-          shopDomain: SHOP_DOMAIN,
-        });
-
-        sendOtpBtn.disabled = false;
-        sendOtpBtn.textContent = 'Resend OTP';
-
-        if (res.ok) {
-          state.otpState.sent = true;
-          document.getElementById('cod-otp-verify-row').style.display = 'flex';
-          const hintEl = document.getElementById('cod-otp-hint');
-          hintEl.style.display = 'block';
-          hintEl.textContent = `Server logged OTP: ${res.data.debugCode} (or enter 000000)`;
-          showAlert('OTP code sent to ' + phoneRes.canonical, 'success');
-        } else {
-          showAlert(res.data.error || 'Failed to send OTP', 'error');
-        }
-      });
-    }
-
-    if (verifyOtpBtn) {
-      verifyOtpBtn.addEventListener('click', async () => {
-        const code = otpInput.value.trim();
-        const phoneRes = validateAndNormalizePhone(phoneInput.value);
-        if (!code || code.length < 4) {
-          showAlert('Please enter the OTP code.', 'error');
-          return;
-        }
-
-        verifyOtpBtn.disabled = true;
-        verifyOtpBtn.textContent = '...';
-
-        const res = await apiCall('/api/cod/otp/verify', 'POST', {
-          phone: phoneRes.canonical,
-          code,
-          sessionId,
-          shopDomain: SHOP_DOMAIN,
-        });
-
-        verifyOtpBtn.disabled = false;
-        verifyOtpBtn.textContent = 'Verify';
-
-        if (res.ok) {
-          state.otpState.verified = true;
-          const box = document.getElementById('cod-otp-container');
-          box.classList.add('verified');
-          box.innerHTML = `<div style="color: #166534; font-weight: 600; font-size: 13.5px;">✓ Mobile Number Verified (+91 ${phoneRes.national10})</div>`;
-          showAlert('Phone verified successfully!', 'success');
-        } else {
-          showAlert(res.data.error || 'Invalid OTP code', 'error');
-        }
-      });
-    }
-
-    // 4. Form Submit Handler -> Funnel Events: `submit_clicked` and `order_created`
+    // 3. Form Submit Handler -> Funnel Events: `submit_clicked` and `order_created`
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearAlert();
@@ -437,12 +353,6 @@
       // Check pincode blocklist
       if (state.settings.pincodeBlocklist && state.settings.pincodeBlocklist.includes(pin)) {
         showAlert(`Cash on Delivery is unavailable for Pincode ${pin}.`, 'error');
-        return;
-      }
-
-      // Check OTP if required
-      if (state.settings.requireOtp && !state.otpState.verified) {
-        showAlert('Please complete Mobile OTP verification before submitting.', 'error');
         return;
       }
 
@@ -566,12 +476,6 @@
     document.getElementById('cod-modal-prod-title').textContent = state.product.title || 'Selected Product';
     document.getElementById('cod-modal-prod-qty').textContent = `Qty: ${state.product.quantity || 1}`;
     updatePriceDisplay();
-
-    // Toggle OTP box visibility according to merchant settings
-    const otpContainer = document.getElementById('cod-otp-container');
-    if (otpContainer) {
-      otpContainer.style.display = state.settings.requireOtp ? 'block' : 'none';
-    }
 
     // Open overlay
     const overlay = document.getElementById('cod-modal-overlay');

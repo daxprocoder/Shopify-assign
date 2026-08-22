@@ -1141,14 +1141,6 @@
             </div>
 
             <div class="form-group-custom">
-              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                <input type="checkbox" id="setting-require-otp" checked style="width: 18px; height: 18px; accent-color: var(--color-primary-green);" />
-                <span style="font-weight: 700; font-size: 14px;">Enforce SMS OTP Verification before order confirmation</span>
-              </label>
-              <div class="form-help-custom">Logs mock SMS code server-side and requires verification on storefront.</div>
-            </div>
-
-            <div class="form-group-custom">
               <label class="form-label-custom" for="setting-order-tag">Shopify Order Tag</label>
               <input type="text" id="setting-order-tag" class="input-custom" value="COD-Form" />
             </div>
@@ -1186,7 +1178,7 @@
         webhooks: { title: 'Payment Webhooks', sub: 'HMAC-SHA256 cryptographic verification audit for external payment updates.' },
         leads: { title: 'Recovery Leads Hub', sub: 'Captured customer leads with 1-click WhatsApp deep-links.' },
         orders: { title: 'COD Orders List', sub: 'Live Shopify orders tagged COD-Form created via storefront form.' },
-        settings: { title: 'Merchant Settings', sub: 'Configure COD handling fee, pincode blocklist, and SMS OTP verification.' },
+        settings: { title: 'Merchant Settings', sub: 'Configure COD handling fee and pincode blocklist.' },
       };
 
       if (titles[tabName]) {
@@ -1387,6 +1379,8 @@
               </a>
             </div>
           `).join('');
+        } else {
+          sidePreview.innerHTML = `<div style="font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 20px;">No dropped leads yet.</div>`;
         }
 
         if (!data.abandonedLeads || data.abandonedLeads.length === 0) {
@@ -1452,7 +1446,6 @@
         if (data.settings) {
           document.getElementById('setting-cod-fee').value = data.settings.codFee || 0;
           document.getElementById('setting-pincode-blocklist').value = (data.settings.pincodeBlocklist || []).join(', ');
-          document.getElementById('setting-require-otp').checked = Boolean(data.settings.requireOtp);
           document.getElementById('setting-order-tag').value = data.settings.orderTag || 'COD-Form';
         }
       } catch (err) {
@@ -1468,7 +1461,6 @@
       const payload = {
         codFee: parseFloat(document.getElementById('setting-cod-fee').value) || 0,
         pincodeBlocklist: document.getElementById('setting-pincode-blocklist').value,
-        requireOtp: document.getElementById('setting-require-otp').checked,
         orderTag: document.getElementById('setting-order-tag').value,
       };
 

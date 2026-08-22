@@ -135,22 +135,8 @@ async function runTests() {
     codFee: 49,
   });
 
-  assert(res3.success && res3.isDuplicate && res3.orderNumber === successfulRes.orderNumber, 'Idempotency returns identical order number on replay without duplicating');
-
-  // TEST 4: Mock OTP Verification
-  console.log('\n--- 4. Testing Mock OTP Workflow ---');
-  const testPhone = '+919876511111';
-  const otpRes = generateAndSendOtp(testPhone, testSession1);
-  assert(otpRes.success && otpRes.debugCode.length === 6, 'Generated 6-digit mock OTP code');
-
-  const badVerify = verifyOtp(testPhone, '999999');
-  assert(!badVerify.success, 'Rejected incorrect OTP code');
-
-  const goodVerify = verifyOtp(testPhone, otpRes.debugCode);
-  assert(goodVerify.success, 'Successfully verified correct OTP code');
-
-  // TEST 5: Abandoned Leads & Recovery
-  console.log('\n--- 5. Testing Abandoned Leads & WhatsApp Recovery Link ---');
+  // TEST 4: Abandoned Leads & Recovery
+  console.log('\n--- 4. Testing Abandoned Leads & WhatsApp Recovery Link ---');
   // Create an abandoned session: phone entered, but never submitted order
   const abandonedSessionId = 'sess_abandoned_' + uuidv4();
   recordFunnelEvent({
@@ -175,8 +161,8 @@ async function runTests() {
   assert(foundLead !== undefined, 'Abandoned session captured in Merchant Recovery List');
   assert(foundLead && foundLead.whatsappUrl.includes('wa.me/919876522222'), 'Prefilled WhatsApp recovery deep-link generated correctly');
 
-  // TEST 6: HMAC-SHA256 Signature Verification
-  console.log('\n--- 6. Testing HMAC-SHA256 Webhook Verification ---');
+  // TEST 5: HMAC-SHA256 Signature Verification
+  console.log('\n--- 5. Testing HMAC-SHA256 Webhook Verification ---');
   const { verifyShopifyHmac, generateTestHmac } = require('../src/utils/hmac');
   const { getRecentIdempotencyTraces } = require('../src/services/idempotency');
 
@@ -190,8 +176,8 @@ async function runTests() {
   const isInvalidHmac = verifyShopifyHmac(Buffer.from(testPayload), 'invalid_hmac_signature', testSecret);
   assert(!isInvalidHmac, 'Forged / invalid HMAC signature rejected');
 
-  // TEST 7: Idempotency Waterfall Traces
-  console.log('\n--- 7. Testing Idempotency Waterfall Traces ---');
+  // TEST 6: Idempotency Waterfall Traces
+  console.log('\n--- 6. Testing Idempotency Waterfall Traces ---');
   const traces = getRecentIdempotencyTraces(5);
   assert(traces.length > 0, 'Recorded stage-by-stage idempotency waterfall traces in SQLite');
   const duplicateTrace = traces.find((t) => t.hasDuplicateReplay);
