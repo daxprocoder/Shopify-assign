@@ -101,7 +101,7 @@ Shopify-assign/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/Shopify-assign.git
+git clone https://github.com/daxprocoder/Shopify-assign.git
 cd Shopify-assign
 ```
 
