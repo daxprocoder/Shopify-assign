@@ -1,80 +1,128 @@
-# Shopify Cash-On-Delivery (COD) Order Form Engine
+# 🚀 Shopify COD Quick-Order Engine & Merchant Intelligence Dashboard
 
-> A high-reliability, one-click Cash-on-Delivery (COD) checkout app for Shopify with truthful session-based funnel tracking, strict idempotency protection, abuse prevention, and merchant recovery tools.
-
----
-
-## 1. Architecture in 10 Lines
-
-```
-[Storefront Product Page] 
-    │ (1-Click "⚡ Cash on Delivery" Trigger)
-    ▼
-[Storefront COD Modal / Theme Extension Block]
-    │ ─── Step Events (form_opened, phone_entered, address_filled, submit_clicked) ───► [Funnel Tracker]
-    │ ─── SMS OTP Verification (Mock) ───► [OTP Verification Service]
-    │ ─── Submit Order + Idempotency Key ───► [Idempotency & Concurrency Guard]
-    ▼                                                  │
-[Express API & Drizzle ORM (SQLite / WAL)]             ▼
-    │ (Server-side Shop Resolution)          [Shopify Admin API] (orderCreate / Draft Orders)
-    ▼                                                  │
-[Merchant Dashboard (Polaris UI)]                      ▼
-  • Funnel Analytics & Biggest Drop Alerts   [Real Shopify Store Orders (Tagged COD-Form)]
-  • Abandoned Leads + WhatsApp 1-Click Recovery
-  • Live Merchant Settings (COD Fee, Pincode Blocklist, OTP Toggle)
-```
+A production-grade, highly truthful **Cash on Delivery (COD) Checkout & Merchant Funnel Intelligence App** built for Shopify India merchants. Features 1-click storefront checkout with Indian phone normalization, zero-duplicate idempotency locking, HMAC-SHA256 payment webhooks, and a modern **Donezo Forest Green** merchant analytics dashboard.
 
 ---
 
-## 2. Setup Steps
+## 🏗️ Architecture in 10 Lines
 
-### Prerequisites
-- Node.js `v18+` (tested on Node `v24`)
-- npm `v9+`
+1. **Storefront Modal (`public/storefront/`):** Lightweight, zero-dependency vanilla JS/CSS modal injected into Shopify Product Pages via Theme App Extension or ScriptTag.
+2. **Indian Phone Normalization (`src/utils/phone.js`):** Client & server sanitize all formats (`+91 98765 43210`, `919876543210`, `09876543210`) into standard E.164 `+919876543210` and validate carrier prefixes `[6-9]`.
+3. **Session Stitching (`sessionStorage`):** Every customer journey receives a persistent `sessionId`, preventing multiple modal opens or page reloads from corrupting top-of-funnel analytics.
+4. **Idempotency Engine (`src/services/idempotency.js`):** Atomic SQLite transaction lock (`status: 'PROCESSING'`) ensures concurrent double-clicks or retries create **exactly one** Shopify order with 0ms duplicate replay overhead.
+5. **Shopify Admin Integration (`src/services/shopify.js`):** Direct REST API integration with 10-second `AbortController` timeout protection, tagging orders as `COD-Form` with `financial_status: 'pending'`.
+6. **Payment Webhooks & HMAC (`src/utils/hmac.js`):** `POST /api/webhooks/orders/paid` validates `X-Shopify-Hmac-Sha256` signatures using constant-time `crypto.timingSafeEqual` to audit payments securely.
+7. **Database Layer (`src/db/`):** Local SQLite with WAL mode (`better-sqlite3` + `Drizzle ORM`) for high-throughput concurrency and sub-millisecond query execution.
+8. **Truthful Funnel Aggregation (`src/services/funnel.js`):** Calculates distinct session milestones, truthful conversion rates, and automatically detects major drop-off points.
+9. **Abandoned Lead Recovery:** Captures dropped phone leads at Step 2 with automatic 1-click WhatsApp deep-links (`https://wa.me/<phone>?text=...`).
+10. **Donezo Merchant Dashboard (`public/dashboard.html`):** Dark forest green bento-grid dashboard with live funnel cylinder charts, idempotency waterfall traces, and real-time order feeds.
 
-### Quick Start (Local Run in Sandbox / Simulator Mode)
-1. **Clone the repository:**
-   ```bash
-   git clone <repo-url>
-   cd Shopify-assign
-   ```
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Start the application:**
-   ```bash
-   npm start
-   ```
-4. **Open in your browser:**
-   - 🛍️ **Storefront Product Page Demo:** [http://localhost:3000/demo](http://localhost:3000/demo)
-   - 📊 **Merchant Funnel Dashboard:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+---
 
-### Connecting to Live Shopify Development Store (`daksh-cod-app.myshopify.com`)
-1. Create a `.env` file from `.env.example`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Populate the Shopify Admin Access Token:
-   ```env
-   PORT=3000
-   SHOPIFY_SHOP_DOMAIN=daksh-cod-app.myshopify.com
-   SHOPIFY_ADMIN_ACCESS_TOKEN=shpat_xxxxxxxxxxxxxxxxxxxxxxxx
-   SHOPIFY_API_VERSION=2024-04
-   ```
-3. Run with Cloudflare tunnel / ngrok for storefront proxying:
-   ```bash
-   npx cloudflared tunnel --url http://localhost:3000
-   ```
+## 🏛️ Comprehensive System Architecture
 
-### Running Automated Test Suite
-Run the end-to-end verification test suite:
+```
+                                 +-------------------------------------------------------------+
+                                 |                  SHOPIFY STOREFRONT / PDP                   |
+                                 |  [ Product Page ] ---> [ ⚡ Buy with COD Trigger Button ]     |
+                                 +------------------------------+------------------------------+
+                                                                |
+                                                 (Opens One-Click Popup Modal)
+                                                                |
+                                                                v
+                                 +-------------------------------------------------------------+
+                                 |                   STOREFRONT COD CLIENT                     |
+                                 |  • Indian Phone Normalization (+91 98765 43210 -> Canonical) |
+                                 |  • In-Memory Milestone Guard (Prevents Duplicate Events)     |
+                                 |  • Deterministic Idempotency Key (idem_<sess>_<time>)       |
+                                 +------------------------------+------------------------------+
+                                                                |
+                                               HTTPS POST /api/cod/order & /event
+                                                                |
+                                                                v
++-------------------------------------------------------------------------------------------------------------------------------+
+|                                                    EXPRESS BACKEND GATEWAY                                                    |
+|                                                                                                                               |
+|   [ Security & Rate Limiting ] ---> [ Request Validation ] ---> [ HMAC-SHA256 Signature Audit (crypto.timingSafeEqual) ]      |
++---------------------------------------------------------------+---------------------------------------------------------------+
+                                                                |
+                                                                v
+                                 +-------------------------------------------------------------+
+                                 |                 IDEMPOTENCY & LOCK ENGINE                   |
+                                 |                                                             |
+                                 |  1. Ingress Key Check in SQLite                             |
+                                 |  2. If Key Exists & SUCCESS -> Return 0ms Cached Order Replay|
+                                 |  3. If New Key -> Acquire Atomic Lock ('PROCESSING')        |
+                                 |  4. Stage-by-Stage Trace Logging (Waterfall Timeline)       |
+                                 +------------------------------+------------------------------+
+                                                                |
+                                        +-----------------------+-----------------------+
+                                        |                                               |
+                                        v                                               v
+         +----------------------------------------------+        +----------------------------------------------+
+         |           SHOPIFY ADMIN REST API             |        |             SQLITE DATABASE (WAL)            |
+         |  POST /admin/api/2024-04/orders.json         |        |  (Drizzle ORM + better-sqlite3)              |
+         |                                              |        |                                              |
+         |  • 10s AbortController Timeout Guard         |        |  • `sessions` (Distinct customer journeys)   |
+         |  • Tag: 'COD-Form'                           |        |  • `funnel_events` (Deduplicated milestones) |
+         |  • Status: 'pending'                         |        |  • `orders` (UNIQUE idempotency_key)         |
+         |  • Custom COD Fee Line Item                  |        |  • `idempotency_traces` (Waterfall metrics)  |
+         |  • Returns Order #1001 (HTTP 201 Created)    |        |  • `webhooks` (HMAC cryptographic audit)     |
+         +----------------------------------------------+        +----------------------------------------------+
+                                        |                                               |
+                                        +-----------------------+-----------------------+
+                                                                |
+                                                                v
++-------------------------------------------------------------------------------------------------------------------------------+
+|                                           DONEZO MERCHANT INTELLIGENCE DASHBOARD                                              |
+|                                                                                                                               |
+|   [ 4 Bento KPI Cards ]  |  [ Funnel Cylinders ]  |  [ Idempotency Waterfall ]  |  [ WhatsApp Recovery ]  |  [ Live Webhooks ] |
++-------------------------------------------------------------------------------------------------------------------------------+
+```
+
+---
+
+## 🛠️ Quickstart & Local Setup
+
+### 1. Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **Shopify Development Store**: (e.g. `daksh-cod-app.myshopify.com`)
+- **Shopify Admin Access Token**: with `write_orders`, `read_orders`, `write_products`, `read_products` scopes.
+
+### 2. Installation
+```bash
+# Clone the repository
+git clone https://github.com/<your-username>/Shopify-assign.git
+cd Shopify-assign
+
+# Install dependencies
+npm install
+```
+
+### 3. Environment Variables
+Create a `.env` file in the root directory:
+```env
+PORT=3000
+SHOPIFY_SHOP_DOMAIN=daksh-cod-app.myshopify.com
+SHOPIFY_ADMIN_ACCESS_TOKEN=shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SHOPIFY_API_VERSION=2024-04
+SHOPIFY_WEBHOOK_SECRET=your_webhook_signing_secret_here
+```
+
+### 4. Running Locally
+```bash
+# Start the local server
+npm start
+```
+- 📊 **Merchant Dashboard:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+- 🛍️ **Storefront PDP Simulator:** [http://localhost:3000/demo](http://localhost:3000/demo)
+
+### 5. Running Automated Verification Suite
+Run the comprehensive test harness:
 ```bash
 npm test
 ```
-Tests phone normalization (+91 canonical formats), funnel deduplication, idempotency race conditions, mock OTP generation/verification, and abandoned lead extraction.
-
----
+*Note: Tests run inside an isolated in-memory SQLite database (`:memory:`) and will never pollute your live database.*
 
 ---
 
@@ -100,11 +148,11 @@ In e-commerce analytics, client-side pixel tracking and naive counters frequentl
 
 ### 1. Edge Case: Customer opens the form 3 times but orders once
 
-* **The Failure Mode:** A shopper on mobile clicks "Buy with COD", closes the popup to re-check product specifications, re-opens the popup, selects a different color/quantity, closes it again, and finally re-opens it to complete the purchase. Naive analytics record 3 `form_opened` events, inflating top-of-funnel traffic by 300% and falsely making the checkout look broken.
+* **The Failure Mode:** A shopper on mobile clicks "Buy with COD", closes the popup to re-check product specifications, re-opens the popup, selects a different quantity, closes it again, and finally re-opens it to complete the purchase. Naive analytics record 3 `form_opened` events, inflating top-of-funnel traffic by 300% and falsely making the checkout look broken.
 * **How We Keep It Truthful:**
   1. **Session Stitching (`sessionStorage`):** The storefront client binds all interactions to an immutable `sessionId` (`sess_<random>_<timestamp>`) stored in browser session memory.
   2. **Client In-Memory Milestone Guards:** The client maintains an in-memory guard dictionary (`eventsFired.form_opened = true`). Subsequent modal re-opens in the same tab suppress duplicate network calls.
-  3. **SQL Set-Theoretic Deduplication:** Even if client state resets (e.g. page refresh), the server funnel query aggregates by distinct sessions:
+  3. **SQL Set-Theoretic Deduplication:** Even if client state resets (e.g. page refresh), the server funnel query aggregates strictly by distinct sessions:
      ```sql
      SELECT COUNT(DISTINCT session_id) AS step_count
      FROM funnel_events
@@ -141,9 +189,9 @@ In e-commerce analytics, client-side pixel tracking and naive counters frequentl
 
 ---
 
-## 4. Idempotency Waterfall Architecture
+## 4. Idempotency Waterfall & Trace Timeline
 
-Below is the exact stage-by-stage lifecycle recorded in the SQLite database and rendered live in the Merchant Dashboard:
+Below is the stage-by-stage lifecycle recorded in the SQLite database and visualized live on the Merchant Dashboard:
 
 ```
 [Storefront Request: POST /api/cod/order]
@@ -188,7 +236,7 @@ Below is the exact stage-by-stage lifecycle recorded in the SQLite database and 
 
 ## 6. Merchant Settings Impact on Storefront
 
-Merchants can configure live rules from the Dashboard (`/dashboard`):
+Merchants can configure live business rules from the Dashboard (`/dashboard`):
 1. **COD Handling Fee (INR)**: Adds an extra convenience fee (e.g. ₹49.00) calculated live in the modal price breakdown and added as a custom Shopify shipping line.
 2. **Pincode Blocklist**: Comma-separated list of non-serviceable pincodes (e.g. `110006, 700001`). Disables order submission and warns customer in real-time.
 3. **Shopify Order Tag**: Customize tag added to orders (e.g. `COD-Form`).
@@ -197,26 +245,27 @@ Merchants can configure live rules from the Dashboard (`/dashboard`):
 
 ## 7. Stretch Goals Included
 
-- ✅ **Mock SMS OTP Verification**: Sends a 6-digit verification code, logs the code server-side with prominent console output, emits `otp_sent` and `otp_verified` events, and verifies code before allowing order submission.
-- ✅ **Abandoned Leads Recovery via WhatsApp Deep-Link**: Automatically lists dropped sessions where customer phone was captured, showing drop-off stage and providing a **1-Click WhatsApp Recovery link** (`https://wa.me/<phone>?text=<prefilled_message>`).
+- ✅ **Abandoned Leads Recovery via WhatsApp Deep-Link:** Automatically lists dropped sessions where customer phone was captured, showing drop-off stage and providing a 1-Click WhatsApp Recovery link (`https://wa.me/<phone>?text=<prefilled_message>`).
+- ✅ **HMAC-SHA256 Webhook Verification:** Full audit pipeline verifying Shopify payment webhooks using `crypto.timingSafeEqual`.
+- ✅ **Live Idempotency Waterfall Traces:** Stage-by-stage concurrency trace visualizer with duplicate absorption metrics.
 
 ---
 
 ## 8. What We Would Do Next with More Time
 
-1. **Shopify Admin GraphQL Order Create (`orderCreate`)**: Transition fully to GraphQL mutation API for bulk variant checks and automatic inventory reservation.
-2. **Live SMS Gateway Integration**: Plug in Twilio / Kaleyra / Gupshup API with SMS rate-limiting, DLT template registration, and auto-read OTP WebOTP API on mobile.
-3. **Redis-backed Distributed Locks (Redlock)**: Replace single-node SQLite locks with Redis locks for multi-instance horizontal scaling.
-4. **Postcode Auto-fill via India Post Postal API**: Auto-populate City and State upon entering a 6-digit Indian PIN code to reduce address drop-off.
-5. **Address Intelligence & RTO Risk Scoring**: Implement machine learning scoring based on phone carrier data, past COD return-to-origin history, and address completeness.
+1. **Shopify Admin GraphQL Order Create (`orderCreate`):** Transition fully to GraphQL mutation API for bulk variant checks and automatic inventory reservation.
+2. **Redis-backed Distributed Locks (Redlock):** Replace single-node SQLite locks with Redis locks for multi-region horizontal scaling.
+3. **Postcode Auto-fill via India Post Postal API:** Auto-populate City and State upon entering a 6-digit Indian PIN code to reduce address friction.
+4. **Address Intelligence & RTO Risk Scoring:** Machine learning model scoring customers based on past COD return-to-origin history and address completeness.
 
 ---
 
 ## 9. 3–5 Minute Screen Recording Script
 
-When recording the submission video:
-1. **0:00 - 0:45 (Storefront Checkout):** Open `http://localhost:3000/demo`, click "⚡ Cash on Delivery (COD)". Show phone normalization by entering `9876543210`. Complete address and click "Send OTP".
-2. **0:45 - 1:30 (Order Placement & Idempotency):** Show server terminal output displaying `[MOCK SMS SERVICE] OTP Code: >>> XXXXXX <<<`. Enter OTP, click "Complete Order". Show the confirmed Order Number (`#1001`).
-3. **1:30 - 2:30 (Shopify Admin / Orders List):** Open `http://localhost:3000/dashboard` $\rightarrow$ "Real COD Orders" tab. Show order tagged `COD-Form` with exact totals, customer info, and timestamp.
-4. **2:30 - 3:30 (Funnel Analytics & Abandoned Session):** Go back to `/demo`, open the form in a new incognito window, enter name & phone number `9876512345`, but close the tab (abandon at address).
-5. **3:30 - 4:30 (Merchant Dashboard & WhatsApp Recovery):** Refresh Dashboard $\rightarrow$ Show updated Funnel Analytics with 1 drop at `address_filled`. Go to "Abandoned Leads Recovery" tab $\rightarrow$ Show the abandoned lead with phone number and click the **"Recover via WhatsApp"** button.
+When recording your demo video:
+
+* **0:00 - 0:45 (Storefront Checkout):** Open `http://localhost:3000/demo`, click **"Buy with Cash on Delivery (COD)"**. Demonstrate Indian phone normalization by entering `98765 43210` $\rightarrow$ auto-formatted to `+919876543210`. Complete address and click **"Complete Cash on Delivery Order"**.
+* **0:45 - 1:30 (Order Placement & Idempotency):** Show order confirmation `#1001`. Refresh the page or double-click to demonstrate that duplicate orders are intercepted and absorbed with 0ms external API overhead.
+* **1:30 - 2:30 (Shopify Admin / Orders List):** Open `http://localhost:3000/dashboard` $\rightarrow$ **"COD Orders"** tab. Show the newly created order tagged `COD-Form` with exact totals, customer info, and timestamp.
+* **2:30 - 3:30 (Funnel Analytics & Abandoned Session):** Go back to `/demo`, open the form in a new incognito window, enter name & phone number `9876512345`, but close the tab without submitting (abandon at address).
+* **3:30 - 4:30 (Merchant Dashboard & WhatsApp Recovery):** Refresh Dashboard $\rightarrow$ Show updated Funnel Analytics with 1 drop at `address_filled`. Go to **"Recovery Leads"** tab $\rightarrow$ Show the abandoned lead with phone number and click the **"Recover via WhatsApp"** button.
