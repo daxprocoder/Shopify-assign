@@ -9,15 +9,20 @@ const { normalizeIndianPhone } = require('./utils/phone');
 const { apiLimiter, orderSubmitLimiter, checkPhoneRateLimit } = require('./utils/rate-limiter');
 const { recordFunnelEvent, getFunnelAnalytics, getAbandonedLeads } = require('./services/funnel');
 const { generateAndSendOtp, verifyOtp } = require('./services/otp');
-const { processIdempotentCodOrder } = require('./services/idempotency');
+const { processIdempotentCodOrder, getTracesForKey, getRecentIdempotencyTraces } = require('./services/idempotency');
+const { verifyShopifyHmac, generateTestHmac } = require('./utils/hmac');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DEFAULT_SHOP = process.env.SHOPIFY_SHOP_DOMAIN || 'daksh-cod-app.myshopify.com';
 
-// Middlewares
+// Middlewares (Preserve rawBody buffer for HMAC-SHA256 validation)
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(apiLimiter);
 
@@ -418,6 +423,154 @@ app.post('/api/dashboard/settings', (req, res) => {
     success: true,
     message: 'Merchant settings saved successfully',
   });
+});
+
+// ==========================================
+// 3. SHOPIFY / PAYMENT HMAC WEBHOOK ENDPOINTS
+// ==========================================
+
+/**
+ * POST /api/webhooks/orders/paid
+ * Secure webhook handler with HMAC-SHA256 signature verification
+ */
+app.post('/api/webhooks/orders/paid', (req, res) => {
+  const hmacHeader = req.headers['x-shopify-hmac-sha256'];
+  const topic = req.headers['x-shopify-topic'] || 'orders/paid';
+  const shop = req.headers['x-shopify-shop-domain'] || DEFAULT_SHOP;
+  const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
+
+  // 1. Verify HMAC Signature
+  const isValidHmac = verifyShopifyHmac(rawBody, hmacHeader);
+  const now = Date.now();
+  const webhookId = uuidv4();
+  const orderData = req.body || {};
+  const shopifyOrderId = orderData.id ? orderData.id.toString() : null;
+
+  if (!isValidHmac) {
+    console.warn(`⚠️ [Webhook Security Alert] Invalid HMAC received for topic: ${topic}`);
+    sqlite.prepare(`
+      INSERT INTO webhooks (id, topic, shopify_order_id, hmac_valid, payload, status, created_at)
+      VALUES (?, ?, ?, 0, ?, 'INVALID_HMAC', ?)
+    `).run(webhookId, topic, shopifyOrderId, JSON.stringify(orderData), now);
+
+    return res.status(401).json({
+      success: false,
+      error: 'HMAC signature verification failed. Unauthorized request.',
+    });
+  }
+
+  // 2. Idempotent Webhook Processing: Check if this webhook / event was already processed
+  const existingOrder = shopifyOrderId
+    ? sqlite.prepare('SELECT * FROM orders WHERE shopify_order_id = ?').get(shopifyOrderId)
+    : null;
+
+  if (existingOrder) {
+    // Update order status to PAID
+    sqlite.prepare(`
+      UPDATE orders SET status = 'PAID', updated_at = ? WHERE id = ?
+    `).run(now, existingOrder.id);
+    console.log(`✅ [Webhook HMAC Verified] Order ${existingOrder.shopify_order_number || shopifyOrderId} marked as PAID`);
+  }
+
+  // Record Webhook in Audit Log
+  sqlite.prepare(`
+    INSERT INTO webhooks (id, topic, shopify_order_id, hmac_valid, payload, status, created_at)
+    VALUES (?, ?, ?, 1, ?, 'PROCESSED', ?)
+  `).run(webhookId, topic, shopifyOrderId, JSON.stringify(orderData), now);
+
+  return res.status(200).json({
+    success: true,
+    message: 'Webhook received, HMAC verified, and processed idempotently.',
+    webhookId,
+  });
+});
+
+/**
+ * POST /api/webhooks/test-trigger
+ * Developer helper to simulate and test HMAC-signed webhooks directly from the UI
+ */
+app.post('/api/webhooks/test-trigger', (req, res) => {
+  const { orderId, amount = 1548, customerName = 'Simulated Customer' } = req.body;
+  const payload = JSON.stringify({
+    id: orderId || Date.now().toString(),
+    financial_status: 'paid',
+    total_price: amount.toString(),
+    customer: { first_name: customerName },
+  });
+
+  const secret = process.env.SHOPIFY_API_SECRET || 'shopify_webhook_secret_dev';
+  const validHmac = generateTestHmac(payload, secret);
+
+  // Directly process through verification logic
+  const isValid = verifyShopifyHmac(Buffer.from(payload), validHmac, secret);
+  const now = Date.now();
+  const webhookId = uuidv4();
+
+  if (orderId) {
+    sqlite.prepare(`
+      UPDATE orders SET status = 'PAID', updated_at = ? WHERE shopify_order_id = ? OR id = ?
+    `).run(now, orderId.toString(), orderId.toString());
+  }
+
+  sqlite.prepare(`
+    INSERT INTO webhooks (id, topic, shopify_order_id, hmac_valid, payload, status, created_at)
+    VALUES (?, 'orders/paid', ?, ?, ?, 'PROCESSED', ?)
+  `).run(webhookId, orderId ? orderId.toString() : 'TEST_ORDER', isValid ? 1 : 0, payload, now);
+
+  res.json({
+    success: true,
+    hmacHeaderGenerated: validHmac,
+    hmacVerified: isValid,
+    webhookId,
+    message: 'Simulated payment webhook received with valid HMAC-SHA256 signature!',
+  });
+});
+
+/**
+ * GET /api/dashboard/webhooks
+ * Retrieve audit log of all webhooks received
+ */
+app.get('/api/dashboard/webhooks', (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const logs = sqlite.prepare(`
+    SELECT * FROM webhooks ORDER BY created_at DESC LIMIT ?
+  `).all(limit);
+
+  const formatted = logs.map((l) => ({
+    id: l.id,
+    topic: l.topic,
+    shopifyOrderId: l.shopify_order_id || 'N/A',
+    hmacValid: Boolean(l.hmac_valid),
+    status: l.status,
+    createdAt: new Date(l.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    payload: l.payload ? JSON.parse(l.payload) : {},
+  }));
+
+  res.json({ success: true, webhooks: formatted });
+});
+
+// ==========================================
+// 4. IDEMPOTENCY WATERFALL TRACES ENDPOINTS
+// ==========================================
+
+/**
+ * GET /api/dashboard/idempotency-traces
+ * Retrieve recent idempotency waterfall traces
+ */
+app.get('/api/dashboard/idempotency-traces', (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 30;
+  const traces = getRecentIdempotencyTraces(limit);
+  res.json({ success: true, traces });
+});
+
+/**
+ * GET /api/dashboard/idempotency-traces/:key
+ * Retrieve single key waterfall timeline
+ */
+app.get('/api/dashboard/idempotency-traces/:key', (req, res) => {
+  const { key } = req.params;
+  const timeline = getTracesForKey(key);
+  res.json({ success: true, idempotencyKey: key, timeline });
 });
 
 // Serve Single Page Application / Dashboard

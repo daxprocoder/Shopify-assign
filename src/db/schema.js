@@ -77,10 +77,34 @@ const otpVerifications = sqliteTable('otp_verifications', {
   createdAt: integer('created_at').notNull(),
 });
 
+// Idempotency Waterfall Traces
+const idempotencyTraces = sqliteTable('idempotency_traces', {
+  id: text('id').primaryKey(),
+  idempotencyKey: text('idempotency_key').notNull(),
+  stepName: text('step_name').notNull(),
+  status: text('status').notNull(),
+  durationMs: integer('duration_ms').default(0),
+  details: text('details'),
+  createdAt: integer('created_at').notNull(),
+});
+
+// Webhook Audit Logs
+const webhooks = sqliteTable('webhooks', {
+  id: text('id').primaryKey(),
+  topic: text('topic').notNull(),
+  shopifyOrderId: text('shopify_order_id'),
+  hmacValid: integer('hmac_valid', { mode: 'boolean' }).default(false),
+  payload: text('payload'),
+  status: text('status').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 module.exports = {
   sessions,
   funnelEvents,
   orders,
   merchantSettings,
   otpVerifications,
+  idempotencyTraces,
+  webhooks,
 };

@@ -93,6 +93,30 @@ function initDb() {
       verified INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS idempotency_traces (
+      id TEXT PRIMARY KEY,
+      idempotency_key TEXT NOT NULL,
+      step_name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      duration_ms INTEGER DEFAULT 0,
+      details TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_traces_key ON idempotency_traces (idempotency_key);
+
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id TEXT PRIMARY KEY,
+      topic TEXT NOT NULL,
+      shopify_order_id TEXT,
+      hmac_valid INTEGER DEFAULT 0,
+      payload TEXT,
+      status TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_webhooks_order ON webhooks (shopify_order_id);
   `);
 
   // Seed default merchant settings for the shop domain if not present

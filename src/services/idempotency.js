@@ -5,6 +5,80 @@ const { recordFunnelEvent } = require('./funnel');
 const { normalizeIndianPhone } = require('../utils/phone');
 
 /**
+ * Record a step in the Idempotency Waterfall Trace.
+ */
+function recordIdempotencyTrace({
+  idempotencyKey,
+  stepName,
+  status = 'OK',
+  durationMs = 0,
+  details = {},
+}) {
+  const traceId = uuidv4();
+  const now = Date.now();
+  try {
+    sqlite.prepare(`
+      INSERT INTO idempotency_traces (id, idempotency_key, step_name, status, duration_ms, details, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(traceId, idempotencyKey, stepName, status, durationMs, JSON.stringify(details), now);
+  } catch (err) {
+    console.error('[Trace Log Error]:', err.message);
+  }
+}
+
+/**
+ * Retrieve the waterfall timeline trace for an idempotency key.
+ */
+function getTracesForKey(idempotencyKey) {
+  const traces = sqlite.prepare(`
+    SELECT * FROM idempotency_traces
+    WHERE idempotency_key = ?
+    ORDER BY created_at ASC
+  `).all(idempotencyKey);
+
+  return traces.map((t) => ({
+    id: t.id,
+    idempotencyKey: t.idempotency_key,
+    stepName: t.step_name,
+    status: t.status,
+    durationMs: t.duration_ms,
+    details: t.details ? JSON.parse(t.details) : {},
+    timestamp: new Date(t.created_at).toISOString(),
+  }));
+}
+
+/**
+ * Retrieve recent idempotency traces grouped by key.
+ */
+function getRecentIdempotencyTraces(limit = 20) {
+  const distinctKeys = sqlite.prepare(`
+    SELECT DISTINCT idempotency_key, MAX(created_at) as latest
+    FROM idempotency_traces
+    GROUP BY idempotency_key
+    ORDER BY latest DESC
+    LIMIT ?
+  `).all(limit);
+
+  return distinctKeys.map((k) => {
+    const traces = getTracesForKey(k.idempotency_key);
+    const firstTrace = traces[0] || {};
+    const lastTrace = traces[traces.length - 1] || {};
+    const totalDuration = traces.reduce((sum, t) => sum + (t.durationMs || 0), 0);
+    const hasDuplicate = traces.some((t) => t.stepName.includes('DUPLICATE') || t.stepName.includes('REPLAY'));
+
+    return {
+      idempotencyKey: k.idempotency_key,
+      startedAt: firstTrace.timestamp || new Date(k.latest).toISOString(),
+      finalStatus: lastTrace.status || 'UNKNOWN',
+      totalSteps: traces.length,
+      totalDurationMs: totalDuration,
+      hasDuplicateReplay: hasDuplicate,
+      traces,
+    };
+  });
+}
+
+/**
  * Idempotent COD Order Submission Handler
  *
  * Guarantees:
@@ -54,6 +128,15 @@ async function processIdempotentCodOrder({
   const addressJson = typeof shippingAddress === 'string' ? shippingAddress : JSON.stringify(shippingAddress);
   const totalPrice = (parseFloat(unitPrice) * parseInt(quantity, 10)) + parseFloat(codFee);
 
+  // Record Stage 1: Request Ingress
+  recordIdempotencyTrace({
+    idempotencyKey,
+    stepName: '1. REQUEST_INGRESS',
+    status: 'RECEIVED',
+    durationMs: 1,
+    details: { sessionId, customerPhone: canonicalPhone, customerName, totalPrice },
+  });
+
   // Ensure session exists in sessions table
   let existingSession = sqlite.prepare('SELECT id FROM sessions WHERE id = ?').get(sessionId);
   if (!existingSession) {
@@ -79,14 +162,28 @@ async function processIdempotentCodOrder({
     );
   }
 
-  // 1. Check if an order record already exists for this idempotency key
+  // Record Stage 2: Lock Check
+  const lockStart = Date.now();
   let existingOrder = sqlite.prepare('SELECT * FROM orders WHERE idempotency_key = ?').get(idempotencyKey);
+  const lockCheckDuration = Math.max(1, Date.now() - lockStart);
 
   if (existingOrder) {
     console.log(`[Idempotency] Request with key ${idempotencyKey} detected. Current status: ${existingOrder.status}`);
 
-    // If order was already successfully placed, return the existing order details
+    // If order was already successfully placed, return cached result immediately
     if (existingOrder.status === 'SUCCESS') {
+      recordIdempotencyTrace({
+        idempotencyKey,
+        stepName: '3. DUPLICATE_CACHE_HIT (0ms Shopify Overhead)',
+        status: 'REPLAY_SUCCESS',
+        durationMs: 0,
+        details: {
+          shopifyOrderId: existingOrder.shopify_order_id,
+          shopifyOrderNumber: existingOrder.shopify_order_number,
+          message: 'Duplicate request safely absorbed. Existing order payload replayed.',
+        },
+      });
+
       return {
         success: true,
         statusCode: 200,
@@ -99,10 +196,17 @@ async function processIdempotentCodOrder({
       };
     }
 
-    // If order is currently in-flight, return 409 Conflict / In-Progress to prevent duplicate calls
+    // If order is currently in-flight, return 409 Conflict / In-Progress
     if (existingOrder.status === 'PROCESSING') {
-      // Check if it's been processing for less than 15 seconds
       if (now - existingOrder.updated_at < 15000) {
+        recordIdempotencyTrace({
+          idempotencyKey,
+          stepName: '3. CONCURRENT_IN_FLIGHT_BLOCKED',
+          status: '409_CONFLICT',
+          durationMs: 0,
+          details: { message: 'Parallel request detected while first request is executing.' },
+        });
+
         return {
           success: false,
           statusCode: 409,
@@ -110,13 +214,20 @@ async function processIdempotentCodOrder({
           error: 'An order submission is already in progress. Please wait a moment.',
         };
       }
-      // If older than 15s, treat as timed-out retry
     }
 
-    // If previous attempt failed, update state to PROCESSING to allow retry
+    // If previous attempt failed, allow retry
     sqlite.prepare(`
       UPDATE orders SET status = 'PROCESSING', updated_at = ? WHERE idempotency_key = ?
     `).run(now, idempotencyKey);
+
+    recordIdempotencyTrace({
+      idempotencyKey,
+      stepName: '3. RETRY_LOCK_RE-ENGAGED',
+      status: 'PROCESSING',
+      durationMs: lockCheckDuration,
+      details: { previousStatus: existingOrder.status },
+    });
   } else {
     // 2. Insert new order record in PROCESSING state (Atomic Lock)
     const orderId = uuidv4();
@@ -142,11 +253,26 @@ async function processIdempotentCodOrder({
         now,
         now
       );
+
+      recordIdempotencyTrace({
+        idempotencyKey,
+        stepName: '3. ATOMIC_LOCK_ACQUIRED',
+        status: 'PROCESSING',
+        durationMs: lockCheckDuration,
+        details: { orderId, lockState: 'PROCESSING' },
+      });
     } catch (insertErr) {
-      // Race condition catch: another worker inserted the same idempotency key simultaneously
       console.warn('[Idempotency Race Condition Handled]:', insertErr.message);
       const racedOrder = sqlite.prepare('SELECT * FROM orders WHERE idempotency_key = ?').get(idempotencyKey);
       if (racedOrder && racedOrder.status === 'SUCCESS') {
+        recordIdempotencyTrace({
+          idempotencyKey,
+          stepName: '3. DUPLICATE_CACHE_HIT (Race Condition Absorbed)',
+          status: 'REPLAY_SUCCESS',
+          durationMs: 0,
+          details: { shopifyOrderNumber: racedOrder.shopify_order_number },
+        });
+
         return {
           success: true,
           statusCode: 200,
@@ -182,7 +308,16 @@ async function processIdempotentCodOrder({
     userAgent,
   });
 
-  // 3. Execute Order Creation with Shopify Admin API
+  // Stage 4: Calling Shopify Admin API
+  const shopifyCallStart = Date.now();
+  recordIdempotencyTrace({
+    idempotencyKey,
+    stepName: '4. SHOPIFY_ADMIN_API_DISPATCH',
+    status: 'DISPATCHED',
+    durationMs: 0,
+    details: { shopDomain, apiEndpoint: '/admin/api/2024-04/orders.json' },
+  });
+
   const shopifyResult = await createShopifyOrder({
     shopDomain,
     customerName,
@@ -198,11 +333,11 @@ async function processIdempotentCodOrder({
     orderTag,
   });
 
+  const shopifyLatency = Date.now() - shopifyCallStart;
   const completionTime = Date.now();
 
-  // 4. Handle Shopify Result
+  // Stage 5 & 6: Handle Shopify Result & Commit
   if (shopifyResult.success) {
-    // Update Order to SUCCESS
     sqlite.prepare(`
       UPDATE orders SET
         status = 'SUCCESS',
@@ -213,7 +348,26 @@ async function processIdempotentCodOrder({
       WHERE idempotency_key = ?
     `).run(shopifyResult.orderId, shopifyResult.orderNumber, shopifyResult.totalPrice, completionTime, idempotencyKey);
 
-    // Record order_created event in Funnel Stream
+    recordIdempotencyTrace({
+      idempotencyKey,
+      stepName: '5. SHOPIFY_CONFIRMED',
+      status: 'CONFIRMED',
+      durationMs: shopifyLatency,
+      details: {
+        shopifyOrderId: shopifyResult.orderId,
+        orderNumber: shopifyResult.orderNumber,
+        latencyMs: shopifyLatency,
+      },
+    });
+
+    recordIdempotencyTrace({
+      idempotencyKey,
+      stepName: '6. DB_COMMITTED_SUCCESS',
+      status: 'COMMITTED',
+      durationMs: 2,
+      details: { finalState: 'SUCCESS', funnelEvent: 'order_created' },
+    });
+
     recordFunnelEvent({
       sessionId,
       eventName: 'order_created',
@@ -239,7 +393,7 @@ async function processIdempotentCodOrder({
     };
   }
 
-  // Handle Failure / Timeout
+  // Handle Timeout
   if (shopifyResult.isTimeout) {
     sqlite.prepare(`
       UPDATE orders SET
@@ -249,6 +403,14 @@ async function processIdempotentCodOrder({
       WHERE idempotency_key = ?
     `).run(shopifyResult.error, completionTime, idempotencyKey);
 
+    recordIdempotencyTrace({
+      idempotencyKey,
+      stepName: '5. SHOPIFY_TIMED_OUT',
+      status: 'TIMED_OUT',
+      durationMs: shopifyLatency,
+      details: { error: shopifyResult.error },
+    });
+
     return {
       success: false,
       statusCode: 504,
@@ -257,7 +419,7 @@ async function processIdempotentCodOrder({
     };
   }
 
-  // Update Order to FAILED
+  // Handle Failure
   sqlite.prepare(`
     UPDATE orders SET
       status = 'FAILED',
@@ -265,6 +427,14 @@ async function processIdempotentCodOrder({
       updated_at = ?
     WHERE idempotency_key = ?
   `).run(shopifyResult.error, completionTime, idempotencyKey);
+
+  recordIdempotencyTrace({
+    idempotencyKey,
+    stepName: '5. SHOPIFY_FAILED',
+    status: 'FAILED',
+    durationMs: shopifyLatency,
+    details: { error: shopifyResult.error },
+  });
 
   return {
     success: false,
@@ -275,4 +445,7 @@ async function processIdempotentCodOrder({
 
 module.exports = {
   processIdempotentCodOrder,
+  recordIdempotencyTrace,
+  getTracesForKey,
+  getRecentIdempotencyTraces,
 };

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shopify COD Order Form - Merchant Dashboard & Funnel Analytics</title>
+  <title>Shopify COD Order Form - Merchant Dashboard & Idempotency Waterfall</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
     :root {
@@ -101,7 +101,7 @@
     .btn-whatsapp:hover { background: #1eb954; color: #fff; }
 
     .main-container {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 24px auto;
       padding: 0 20px;
     }
@@ -111,7 +111,8 @@
       display: flex;
       border-bottom: 1px solid var(--border);
       margin-bottom: 24px;
-      gap: 24px;
+      gap: 20px;
+      overflow-x: auto;
     }
     .tab-item {
       padding: 12px 4px;
@@ -123,6 +124,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
     }
     .tab-item.active {
       color: var(--primary);
@@ -282,6 +284,11 @@
       border: 1px solid #fde68a;
       color: #92400e;
     }
+    .alert-banner.info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
 
     /* Table Styles */
     .data-table {
@@ -313,8 +320,54 @@
       font-weight: 700;
     }
     .badge-status.success { background: #dcfce7; color: #166534; }
+    .badge-status.paid { background: #dbeafe; color: #1e40af; }
     .badge-status.processing { background: #fef3c7; color: #92400e; }
     .badge-status.failed { background: #fee2e2; color: #991b1b; }
+    .badge-status.replay { background: #f3e8ff; color: #7e22ce; }
+
+    /* Waterfall Timeline View */
+    .waterfall-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .waterfall-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .timeline-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .timeline-node {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      background: #ffffff;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .node-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .node-icon.done { background: #dcfce7; color: #166534; }
+    .node-icon.cached { background: #f3e8ff; color: #7e22ce; }
+    .node-icon.wait { background: #fef3c7; color: #92400e; }
 
     /* Form in Settings */
     .form-group {
@@ -379,6 +432,12 @@
       <div class="tab-item active" onclick="switchTab('funnel')">
         <i class="bi bi-funnel"></i> Funnel Analytics
       </div>
+      <div class="tab-item" onclick="switchTab('waterfall')">
+        <i class="bi bi-diagram-3"></i> ⚡ Idempotency Waterfall
+      </div>
+      <div class="tab-item" onclick="switchTab('webhooks')">
+        <i class="bi bi-shield-check"></i> 🔔 Payment Webhooks (HMAC)
+      </div>
       <div class="tab-item" onclick="switchTab('leads')">
         <i class="bi bi-telephone-outbound"></i> Abandoned Leads Recovery
         <span id="lead-count-badge" style="background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 10px; font-size: 11px;">0</span>
@@ -395,7 +454,6 @@
     <!-- TAB 1: FUNNEL TRACKING & DROP-OFF ANALYTICS   -->
     <!-- ============================================== -->
     <section id="tab-funnel">
-      <!-- High level KPIs -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label">Total COD Form Sessions</div>
@@ -414,7 +472,6 @@
         </div>
       </div>
 
-      <!-- Funnel Breakdown Card -->
       <div class="card">
         <div class="card-header">
           <div>
@@ -430,7 +487,6 @@
           </div>
         </div>
 
-        <!-- Biggest Drop Point Highlight -->
         <div id="biggest-drop-banner" class="alert-banner warning" style="display: none;">
           <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px;"></i>
           <div>
@@ -439,15 +495,83 @@
           </div>
         </div>
 
-        <!-- Funnel Step Visualization -->
-        <div class="funnel-container" id="funnel-steps-list">
-          <!-- Populated dynamically -->
+        <div class="funnel-container" id="funnel-steps-list"></div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 2: IDEMPOTENCY WATERFALL TRACES            -->
+    <!-- ============================================== -->
+    <section id="tab-waterfall" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">⚡ Idempotency Waterfall & Concurrency Execution Traces</h3>
+            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
+              Live stage-by-stage timeline showing how locks, Shopify API dispatches, and duplicate replays are resolved with zero extra orders.
+            </p>
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="loadIdempotencyTraces()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh Traces
+          </button>
+        </div>
+
+        <div class="alert-banner info">
+          <i class="bi bi-info-circle-fill" style="font-size: 18px;"></i>
+          <div>
+            <strong>How our Idempotency Engine protects the merchant:</strong>
+            Each checkout attempt is bound to a unique <code>idempotency_key</code>. Duplicate taps, network retries, or concurrent clicks hit the cache (<code>0ms</code> Shopify overhead) and replay the existing order payload without creating duplicates.
+          </div>
+        </div>
+
+        <div id="waterfall-traces-list">
+          <div style="text-align: center; color: var(--text-subdued); padding: 24px;">Loading waterfall traces...</div>
         </div>
       </div>
     </section>
 
     <!-- ============================================== -->
-    <!-- TAB 2: ABANDONED LEADS & RECOVERY HUB          -->
+    <!-- TAB 3: PAYMENT WEBHOOKS (HMAC-SHA256)          -->
+    <!-- ============================================== -->
+    <section id="tab-webhooks" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">🔔 Shopify Payment Webhooks (HMAC-SHA256 Verified)</h3>
+            <p style="font-size: 13px; color: var(--text-subdued); margin-top: 2px;">
+              Secure payment webhook ingestion verifying cryptographic signature <code>X-Shopify-Hmac-Sha256</code> with <code>crypto.timingSafeEqual</code>.
+            </p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="triggerTestHmacWebhook()">
+            <i class="bi bi-send-check"></i> ⚡ Send Test HMAC Webhook
+          </button>
+        </div>
+
+        <div id="webhook-test-feedback" style="display: none; margin-bottom: 16px;" class="alert-banner info">
+          <i class="bi bi-check-circle-fill"></i>
+          <span id="webhook-test-msg">Simulated webhook processed</span>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Webhook ID</th>
+              <th>Topic</th>
+              <th>Shopify Order ID</th>
+              <th>HMAC Status</th>
+              <th>Processing Status</th>
+              <th>Received At</th>
+            </tr>
+          </thead>
+          <tbody id="webhooks-tbody">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-subdued);">No webhooks received yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 4: ABANDONED LEADS & RECOVERY HUB          -->
     <!-- ============================================== -->
     <section id="tab-leads" style="display: none;">
       <div class="card">
@@ -480,7 +604,7 @@
     </section>
 
     <!-- ============================================== -->
-    <!-- TAB 3: REAL COD ORDERS                         -->
+    <!-- TAB 5: REAL COD ORDERS                         -->
     <!-- ============================================== -->
     <section id="tab-orders" style="display: none;">
       <div class="card">
@@ -515,7 +639,7 @@
     </section>
 
     <!-- ============================================== -->
-    <!-- TAB 4: MERCHANT SETTINGS                       -->
+    <!-- TAB 6: MERCHANT SETTINGS                       -->
     <!-- ============================================== -->
     <section id="tab-settings" style="display: none;">
       <div class="card">
@@ -574,6 +698,8 @@
       if (targetSection) targetSection.style.display = 'block';
 
       if (tabName === 'funnel') loadFunnelData();
+      if (tabName === 'waterfall') loadIdempotencyTraces();
+      if (tabName === 'webhooks') loadWebhooks();
       if (tabName === 'leads') loadAbandonedLeads();
       if (tabName === 'orders') loadOrders();
       if (tabName === 'settings') loadSettings();
@@ -595,7 +721,6 @@
         document.getElementById('kpi-orders').textContent = data.totalOrders;
         document.getElementById('kpi-conv').textContent = `${data.overallConversionRate}%`;
 
-        // Biggest Drop Point
         const dropBanner = document.getElementById('biggest-drop-banner');
         if (data.biggestDropPoint && data.biggestDropPoint.dropCount > 0) {
           dropBanner.style.display = 'flex';
@@ -605,7 +730,6 @@
           dropBanner.style.display = 'none';
         }
 
-        // Render Step Bars
         const stepsContainer = document.getElementById('funnel-steps-list');
         stepsContainer.innerHTML = '';
 
@@ -633,6 +757,110 @@
         });
       } catch (err) {
         console.error('Error loading funnel:', err);
+      }
+    }
+
+    async function loadIdempotencyTraces() {
+      try {
+        const res = await fetch('/api/dashboard/idempotency-traces');
+        const data = await res.json();
+        const container = document.getElementById('waterfall-traces-list');
+
+        if (!data.traces || data.traces.length === 0) {
+          container.innerHTML = `<div style="text-align: center; color: var(--text-subdued); padding: 24px;">No order idempotency traces recorded yet. Place an order on <a href="/demo" target="_blank">Storefront PDP</a> to see the live waterfall!</div>`;
+          return;
+        }
+
+        container.innerHTML = data.traces.map(trace => {
+          const badgeClass = trace.hasDuplicateReplay ? 'replay' : (trace.finalStatus === 'COMMITTED' || trace.finalStatus === 'REPLAY_SUCCESS' ? 'success' : 'processing');
+          return `
+            <div class="waterfall-card">
+              <div class="waterfall-header">
+                <div>
+                  <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #0f172a;">${trace.idempotencyKey}</span>
+                  <span class="badge-status ${badgeClass}" style="margin-left: 8px;">
+                    ${trace.hasDuplicateReplay ? 'DUPLICATE ABSORPTION DETECTED' : trace.finalStatus}
+                  </span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-subdued);">
+                  Total Duration: <strong>${trace.totalDurationMs}ms</strong> • ${new Date(trace.startedAt).toLocaleTimeString()}
+                </div>
+              </div>
+
+              <div class="timeline-steps">
+                ${trace.traces.map(t => {
+                  const isCached = t.stepName.includes('DUPLICATE') || t.stepName.includes('REPLAY');
+                  const iconClass = isCached ? 'cached' : 'done';
+                  const iconSymbol = isCached ? '⚡' : '✓';
+                  return `
+                    <div class="timeline-node">
+                      <div class="node-icon ${iconClass}">${iconSymbol}</div>
+                      <div style="flex: 1;">
+                        <strong>${t.stepName}</strong>
+                        <span style="color: var(--text-subdued); font-size: 11.5px; margin-left: 8px;">(${t.durationMs}ms)</span>
+                        <div style="font-size: 12px; color: #475569; margin-top: 2px;">
+                          ${JSON.stringify(t.details)}
+                        </div>
+                      </div>
+                      <div style="font-size: 11px; color: #94a3b8;">${new Date(t.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading traces:', err);
+      }
+    }
+
+    async function loadWebhooks() {
+      try {
+        const res = await fetch('/api/dashboard/webhooks');
+        const data = await res.json();
+        const tbody = document.getElementById('webhooks-tbody');
+
+        if (!data.webhooks || data.webhooks.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-subdued); padding: 24px;">No webhooks received yet. Click "Send Test HMAC Webhook" to test!</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.webhooks.map(w => `
+          <tr>
+            <td><code style="font-size: 11.5px;">${w.id.substring(0, 13)}...</code></td>
+            <td><strong>${w.topic}</strong></td>
+            <td><code>${w.shopifyOrderId}</code></td>
+            <td>
+              <span class="badge-status ${w.hmacValid ? 'success' : 'failed'}">
+                ${w.hmacValid ? '✓ Valid HMAC-SHA256' : '✗ Invalid Signature'}
+              </span>
+            </td>
+            <td><span class="badge-status ${w.status === 'PROCESSED' ? 'paid' : 'failed'}">${w.status}</span></td>
+            <td style="font-size: 12px; color: var(--text-subdued);">${w.createdAt}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Error loading webhooks:', err);
+      }
+    }
+
+    async function triggerTestHmacWebhook() {
+      try {
+        const res = await fetch('/api/webhooks/test-trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: 1548, customerName: 'Test Webhook Customer' })
+        });
+        const data = await res.json();
+        const banner = document.getElementById('webhook-test-feedback');
+        banner.style.display = 'flex';
+        document.getElementById('webhook-test-msg').textContent =
+          `Success: Test HMAC-SHA256 Webhook dispatched & verified (HMAC: ${data.hmacHeaderGenerated.substring(0, 20)}...)`;
+        loadWebhooks();
+        loadOrders();
+      } catch (err) {
+        alert('Failed to send test webhook');
       }
     }
 
@@ -746,9 +974,10 @@
       loadFunnelData();
       loadAbandonedLeads();
       loadOrders();
+      loadIdempotencyTraces();
+      loadWebhooks();
     }
 
-    // Initial Load
     refreshAllData();
   </script>
 </body>

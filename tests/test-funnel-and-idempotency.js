@@ -172,6 +172,28 @@ async function runTests() {
   assert(foundLead !== undefined, 'Abandoned session captured in Merchant Recovery List');
   assert(foundLead && foundLead.whatsappUrl.includes('wa.me/919876522222'), 'Prefilled WhatsApp recovery deep-link generated correctly');
 
+  // TEST 6: HMAC-SHA256 Signature Verification
+  console.log('\n--- 6. Testing HMAC-SHA256 Webhook Verification ---');
+  const { verifyShopifyHmac, generateTestHmac } = require('../src/utils/hmac');
+  const { getRecentIdempotencyTraces } = require('../src/services/idempotency');
+
+  const testPayload = JSON.stringify({ id: '12345', financial_status: 'paid' });
+  const testSecret = 'shopify_secret_key_123';
+  const validHmac = generateTestHmac(testPayload, testSecret);
+
+  const isValidHmac = verifyShopifyHmac(Buffer.from(testPayload), validHmac, testSecret);
+  assert(isValidHmac, 'Valid HMAC signature accurately verified with crypto.timingSafeEqual');
+
+  const isInvalidHmac = verifyShopifyHmac(Buffer.from(testPayload), 'invalid_hmac_signature', testSecret);
+  assert(!isInvalidHmac, 'Forged / invalid HMAC signature rejected');
+
+  // TEST 7: Idempotency Waterfall Traces
+  console.log('\n--- 7. Testing Idempotency Waterfall Traces ---');
+  const traces = getRecentIdempotencyTraces(5);
+  assert(traces.length > 0, 'Recorded stage-by-stage idempotency waterfall traces in SQLite');
+  const duplicateTrace = traces.find((t) => t.hasDuplicateReplay);
+  assert(duplicateTrace !== undefined, 'Captured 0ms Duplicate Absorption in Waterfall Trace timeline');
+
   console.log('\n====================================================');
   console.log(`🎉 TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
   console.log('====================================================\n');
