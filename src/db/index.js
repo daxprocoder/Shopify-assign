@@ -3,7 +3,7 @@ const { drizzle } = require('drizzle-orm/better-sqlite3');
 const path = require('path');
 const schema = require('./schema');
 
-const dbPath = path.resolve(__dirname, '../../cod_app.db');
+const dbPath = process.env.DB_PATH || path.resolve(__dirname, '../../cod_app.db');
 const sqlite = new Database(dbPath);
 
 // Enable WAL mode for better concurrency and performance

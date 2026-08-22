@@ -9,6 +9,9 @@
  * 6. Abandoned Leads Extraction & WhatsApp Link Generation
  */
 
+// Use isolated in-memory SQLite DB for tests so real database is never polluted
+process.env.DB_PATH = ':memory:';
+
 const { normalizeIndianPhone } = require('../src/utils/phone');
 const { recordFunnelEvent, getFunnelAnalytics, getAbandonedLeads } = require('../src/services/funnel');
 const { processIdempotentCodOrder } = require('../src/services/idempotency');
