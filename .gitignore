@@ -3,3 +3,6 @@ cod_app.db*
 .env
 .DS_Store
 *.log
+*.rar
+*.zip
+tools

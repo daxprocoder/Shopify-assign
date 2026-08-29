@@ -1,7 +1,12 @@
 name = "COD Order Form"
 type = "theme_app_extension"
+uid = "9d100023-572c-f648-90c9-69c2598b62e539b5041b"
 
 [[blocks]]
 name = "COD Buy Button"
 target = "section"
 template = "product"
+
+[[blocks]]
+name = "COD Auto Button"
+target = "body"

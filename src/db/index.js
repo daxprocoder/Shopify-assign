@@ -72,6 +72,7 @@ function initDb() {
 
     CREATE INDEX IF NOT EXISTS idx_orders_idempotency ON orders (idempotency_key);
     CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_shopify_id ON orders (shopify_order_id) WHERE shopify_order_id IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS merchant_settings (
       shop_domain TEXT PRIMARY KEY,

@@ -767,33 +767,33 @@
 
         <div class="nav-section-label">Menu</div>
         <nav class="nav-menu">
-          <div class="nav-item active" onclick="switchTab('funnel')">
+          <div class="nav-item active" data-tab="funnel" onclick="switchTab('funnel')">
             <div class="nav-item-left">
               <i class="bi bi-grid-1x2-fill"></i>
               <span>Dashboard</span>
             </div>
           </div>
-          <div class="nav-item" onclick="switchTab('waterfall')">
+          <div class="nav-item" data-tab="waterfall" onclick="switchTab('waterfall')">
             <div class="nav-item-left">
               <i class="bi bi-diagram-3-fill"></i>
               <span>Idempotency</span>
             </div>
             <span class="nav-badge" style="background: #e0e7ff; color: #3730a3;">Live</span>
           </div>
-          <div class="nav-item" onclick="switchTab('webhooks')">
+          <div class="nav-item" data-tab="webhooks" onclick="switchTab('webhooks')">
             <div class="nav-item-left">
               <i class="bi bi-shield-check"></i>
               <span>HMAC Webhooks</span>
             </div>
           </div>
-          <div class="nav-item" onclick="switchTab('leads')">
+          <div class="nav-item" data-tab="leads" onclick="switchTab('leads')">
             <div class="nav-item-left">
               <i class="bi bi-telephone-outbound-fill"></i>
               <span>Recovery Leads</span>
             </div>
             <span id="sidebar-lead-badge" class="nav-badge">0</span>
           </div>
-          <div class="nav-item" onclick="switchTab('orders')">
+          <div class="nav-item" data-tab="orders" onclick="switchTab('orders')">
             <div class="nav-item-left">
               <i class="bi bi-bag-check-fill"></i>
               <span>COD Orders</span>
@@ -803,18 +803,18 @@
 
         <div class="nav-section-label">General</div>
         <nav class="nav-menu">
-          <div class="nav-item" onclick="switchTab('settings')">
+          <div class="nav-item" data-tab="settings" onclick="switchTab('settings')">
             <div class="nav-item-left">
               <i class="bi bi-sliders"></i>
               <span>Settings</span>
             </div>
           </div>
-          <a href="/demo" target="_blank" class="nav-item">
+          <a href="https://daksh-cod-app.myshopify.com" target="_blank" class="nav-item">
             <div class="nav-item-left">
               <i class="bi bi-shop"></i>
-              <span>Storefront Demo</span>
+              <span>Shopify Store</span>
             </div>
-            <i class="bi bi-arrow-up-right" style="font-size: 12px;"></i>
+            <i class="bi bi-box-arrow-up-right" style="font-size: 12px;"></i>
           </a>
         </nav>
       </div>
@@ -866,8 +866,8 @@
           <p class="page-subtitle" id="main-page-subheading">Track, analyze, and optimize your COD checkout conversions with absolute truthfulness.</p>
         </div>
         <div class="page-actions-group">
-          <a href="/demo" target="_blank" class="btn-pill-primary">
-            <i class="bi bi-bag-plus-fill"></i> + Test Storefront Form
+          <a href="https://daksh-cod-app.myshopify.com" target="_blank" class="btn-pill-primary">
+            <i class="bi bi-shop"></i> Open Storefront ↗
           </a>
           <button type="button" class="btn-pill-secondary" onclick="refreshAllData()">
             <i class="bi bi-arrow-repeat"></i> Refresh
@@ -1165,8 +1165,8 @@
       document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
 
       // Update active nav
-      const activeNavs = Array.from(document.querySelectorAll('.nav-item')).filter(t => t.textContent.toLowerCase().includes(tabName.toLowerCase()));
-      if (activeNavs.length > 0) activeNavs[0].classList.add('active');
+      const activeNav = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+      if (activeNav) activeNav.classList.add('active');
 
       const targetSection = document.getElementById(`tab-${tabName}`);
       if (targetSection) targetSection.style.display = 'block';
@@ -1259,7 +1259,7 @@
         const container = document.getElementById('waterfall-traces-list');
 
         if (!data.traces || data.traces.length === 0) {
-          container.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); padding: 32px;">No idempotency traces recorded yet. Place an order on the <a href="/demo" target="_blank" style="color: var(--color-primary-green); font-weight: 700;">Storefront PDP</a> to view live waterfall traces!</div>`;
+          container.innerHTML = `<div style="text-align: center; color: var(--color-text-muted); padding: 32px;">No idempotency traces recorded yet. Place an order on the <a href="https://daksh-cod-app.myshopify.com" target="_blank" style="color: var(--color-primary-green); font-weight: 700;">Shopify Storefront</a> to view live waterfall traces!</div>`;
           return;
         }
 
@@ -1488,7 +1488,22 @@
       loadWebhooks();
     }
 
+    // Global Search Filter
+    const searchInput = document.getElementById('global-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(r => {
+          const text = r.textContent.toLowerCase();
+          r.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
+
+    // Initial load and periodic live auto-refresh
     refreshAllData();
+    setInterval(refreshAllData, 10000);
   </script>
 </body>
 </html>

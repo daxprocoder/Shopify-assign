@@ -11,6 +11,7 @@ const { recordFunnelEvent, getFunnelAnalytics, getAbandonedLeads } = require('./
 const { generateAndSendOtp, verifyOtp } = require('./services/otp');
 const { processIdempotentCodOrder, getTracesForKey, getRecentIdempotencyTraces } = require('./services/idempotency');
 const { verifyShopifyHmac, generateTestHmac } = require('./utils/hmac');
+const { syncShopifyAdminOrders } = require('./services/shopify');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,9 +27,11 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 app.use(apiLimiter);
 
-// Serve static assets (Dashboard UI & Storefront scripts)
+// Serve static assets (Dashboard UI)
 app.use('/static', express.static(path.join(__dirname, '../public')));
-app.use('/storefront', express.static(path.join(__dirname, '../public/storefront')));
+// NOTE: /storefront route disabled — local test storefront no longer used.
+// The Shopify storefront (extension) is now the sole customer-facing frontend.
+// app.use('/storefront', express.static(path.join(__dirname, '../public/storefront')));
 
 // Request logger
 app.use((req, res, next) => {
@@ -231,6 +234,7 @@ app.post('/api/cod/order', orderSubmitLimiter, async (req, res) => {
     shopDomain = DEFAULT_SHOP,
     customerName,
     customerPhone,
+    customerEmail,
     shippingAddress,
     productTitle,
     variantId,
@@ -271,6 +275,7 @@ app.post('/api/cod/order', orderSubmitLimiter, async (req, res) => {
     shopDomain,
     customerName,
     customerPhone,
+    customerEmail,
     shippingAddress: addr,
     productTitle,
     variantId,
@@ -303,11 +308,18 @@ app.get('/api/dashboard/funnel', (req, res) => {
 
 /**
  * GET /api/dashboard/orders
- * Return real COD orders placed via the app
+ * Return real COD orders placed via the app (synced live with Shopify Admin)
  */
-app.get('/api/dashboard/orders', (req, res) => {
+app.get('/api/dashboard/orders', async (req, res) => {
   const shop = req.query.shop || DEFAULT_SHOP;
   const limit = parseInt(req.query.limit, 10) || 50;
+
+  // Sync live orders from Shopify Admin in the background (non-blocking).
+  // Webhook-based sync (orders/create) is the primary ingestion path.
+  // This serves as a fallback polling mechanism and does NOT delay the response.
+  syncShopifyAdminOrders(shop, limit).catch((e) => {
+    console.warn('[Shopify Sync] Background sync failed (non-critical):', e.message);
+  });
 
   const ordersList = sqlite.prepare(`
     SELECT
@@ -339,6 +351,15 @@ app.get('/api/dashboard/orders', (req, res) => {
       addrObj = JSON.parse(ord.shipping_address);
     } catch (_) {}
 
+    const street = [addrObj.address1, addrObj.address2, addrObj.street].filter(Boolean).join(', ');
+    const city = addrObj.city || '';
+    const prov = addrObj.province || addrObj.state || '';
+    const cityProv = [city, prov].filter(Boolean).join(', ');
+    const pin = addrObj.pincode || addrObj.zip || '';
+    const country = addrObj.country || '';
+    const addressParts = [street, cityProv, pin ? `(${pin})` : '', country].filter(Boolean);
+    const addressSummary = addressParts.length > 0 ? addressParts.join(', ') : 'Standard Delivery';
+
     const shopDomain = shop.replace('.myshopify.com', '');
     const adminLink = ord.shopify_order_id
       ? `https://admin.shopify.com/store/${shopDomain}/orders/${ord.shopify_order_id}`
@@ -350,7 +371,7 @@ app.get('/api/dashboard/orders', (req, res) => {
       status: ord.status,
       customerName: ord.customer_name,
       customerPhone: ord.customer_phone,
-      addressSummary: `${addrObj.address1 || ''}, ${addrObj.city || ''} (${addrObj.pincode || ''})`,
+      addressSummary,
       productTitle: ord.product_title,
       quantity: ord.quantity,
       totalPrice: `₹${ord.total_price.toFixed(2)}`,
@@ -487,6 +508,180 @@ app.post('/api/webhooks/orders/paid', (req, res) => {
 });
 
 /**
+ * POST /api/webhooks/orders/create
+ * Primary webhook: Shopify fires this every time a new order is created.
+ * This is the main ingestion path for real COD orders into CODIFY.
+ * HMAC-SHA256 verified using the existing verifyShopifyHmac utility.
+ * Idempotent: Shopify retries webhooks — ON CONFLICT prevents duplicate rows.
+ */
+app.post('/api/webhooks/orders/create', (req, res) => {
+  const hmacHeader = req.headers['x-shopify-hmac-sha256'];
+  const topic = req.headers['x-shopify-topic'] || 'orders/create';
+  const shop = req.headers['x-shopify-shop-domain'] || DEFAULT_SHOP;
+  const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
+
+  // 1. Verify HMAC-SHA256 (reuses existing utility — no duplicate implementation)
+  const isValidHmac = verifyShopifyHmac(rawBody, hmacHeader);
+
+  if (!isValidHmac) {
+    console.warn(`⚠️ [Webhook Security] Invalid HMAC on orders/create from ${shop}`);
+    return res.status(401).json({ success: false, error: 'HMAC verification failed.' });
+  }
+
+  const orderData = req.body || {};
+  const shopifyOrderId = orderData.id ? orderData.id.toString() : null;
+
+  if (!shopifyOrderId) {
+    return res.status(400).json({ success: false, error: 'Missing order ID in webhook payload.' });
+  }
+
+  const now = Date.now();
+
+  try {
+    // 2. Extract customer & product information from Shopify order payload
+    const cust = orderData.customer || {};
+    const ship = orderData.shipping_address || orderData.billing_address || {};
+    const firstName = cust.first_name || ship.first_name || '';
+    const lastName = cust.last_name || ship.last_name || '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || ship.name || 'Customer';
+    const phone = cust.phone || ship.phone || '';
+    const email = cust.email || '';
+    const lineItem = (orderData.line_items && orderData.line_items[0]) || {};
+    const variantId = lineItem.variant_id ? lineItem.variant_id.toString() : null;
+    const productTitle = lineItem.title || orderData.note || 'COD Order';
+    const quantity = lineItem.quantity || 1;
+    const unitPrice = parseFloat(lineItem.price || 0);
+    const totalPrice = parseFloat(orderData.total_price || 0);
+    const currency = orderData.currency || 'INR';
+    const orderNumber = orderData.name || ('#' + orderData.order_number);
+    const financialStatus = orderData.financial_status || 'pending';
+    const tags = orderData.tags || '';
+    const createdAt = new Date(orderData.created_at || Date.now()).getTime();
+
+    const shippingAddr = JSON.stringify({
+      address1: ship.address1 || '',
+      address2: ship.address2 || '',
+      city: ship.city || '',
+      province: ship.province || '',
+      zip: ship.zip || '',
+      country: ship.country || 'IN',
+      phone: ship.phone || phone,
+      name: fullName,
+    });
+
+    // 3. Ensure a session row exists (synthetic session for webhook-sourced orders)
+    const sessionId = 'whook_' + shopifyOrderId;
+    const existingSession = sqlite.prepare('SELECT id FROM sessions WHERE id = ?').get(sessionId);
+    if (!existingSession) {
+      sqlite.prepare(`
+        INSERT INTO sessions (
+          id, shop_domain, customer_name, customer_phone, customer_address,
+          pincode, city, state, cart_total, product_title, current_step,
+          is_converted, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'order_created', 1, ?, ?)
+      `).run(
+        sessionId,
+        shop,
+        fullName,
+        phone,
+        shippingAddr,
+        ship.zip || '',
+        ship.city || '',
+        ship.province || '',
+        totalPrice,
+        productTitle,
+        createdAt,
+        now
+      );
+    }
+
+    // 4. Determine order status from Shopify financial_status
+    const orderStatus = financialStatus === 'paid' ? 'PAID' : 'SUCCESS';
+    const idempotencyKey = 'whook_' + shopifyOrderId;
+
+    // 5. Idempotent insert/update — check if this Shopify order already exists in DB.
+    // Uses idempotency_key (UNIQUE column) for the ON CONFLICT target.
+    // This handles Shopify webhook retries without creating duplicates.
+    const existingOrder = sqlite.prepare('SELECT id FROM orders WHERE shopify_order_id = ?').get(shopifyOrderId);
+
+    if (existingOrder) {
+      // Order already exists (from a previous COD form submission or earlier webhook delivery)
+      // Update it with the latest data from Shopify
+      sqlite.prepare(`
+        UPDATE orders SET
+          shopify_order_number = ?,
+          status = ?,
+          customer_name = ?,
+          customer_phone = ?,
+          shipping_address = ?,
+          product_title = ?,
+          variant_id = ?,
+          quantity = ?,
+          total_price = ?,
+          currency = ?,
+          updated_at = ?
+        WHERE shopify_order_id = ?
+      `).run(
+        orderNumber,
+        orderStatus,
+        fullName,
+        phone,
+        shippingAddr,
+        productTitle,
+        variantId,
+        quantity,
+        totalPrice,
+        currency,
+        now,
+        shopifyOrderId
+      );
+    } else {
+      // New order from Shopify — insert it fresh
+      sqlite.prepare(`
+        INSERT INTO orders (
+          id, idempotency_key, session_id, shopify_order_id, shopify_order_number,
+          status, customer_name, customer_phone, shipping_address, product_title,
+          variant_id, quantity, total_price, cod_fee, currency, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(idempotency_key) DO UPDATE SET
+          shopify_order_id = excluded.shopify_order_id,
+          shopify_order_number = excluded.shopify_order_number,
+          status = excluded.status,
+          updated_at = excluded.updated_at
+      `).run(
+        'ord_whook_' + shopifyOrderId,
+        idempotencyKey,
+        sessionId,
+        shopifyOrderId,
+        orderNumber,
+        orderStatus,
+        fullName,
+        phone,
+        shippingAddr,
+        productTitle,
+        variantId,
+        quantity,
+        totalPrice,
+        0,
+        currency,
+        createdAt,
+        now
+      );
+    }
+
+    console.log(`✅ [Webhook orders/create] Shopify order ${orderNumber} (${shopifyOrderId}) saved to CODIFY. Customer: ${fullName}, Total: ${currency} ${totalPrice}`);
+
+    // 6. Return 200 to Shopify immediately (required within 5s or Shopify retries)
+    return res.status(200).json({ success: true, message: 'Order received and stored in CODIFY.' });
+
+  } catch (err) {
+    console.error('[Webhook orders/create Error]:', err.message);
+    // Still return 200 to prevent infinite Shopify retries for malformed data
+    return res.status(200).json({ success: true, message: 'Received.' });
+  }
+});
+
+/**
  * POST /api/webhooks/test-trigger
  * Developer helper to simulate and test HMAC-signed webhooks directly from the UI
  */
@@ -583,10 +778,11 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/dashboard.html'));
 });
 
-// Interactive Product Page Demo (Simulates live Shopify PDP)
-app.get('/demo', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/demo.html'));
-});
+// NOTE: /demo route disabled — local test storefront no longer used.
+// The Shopify storefront (with the COD extension) is now the sole customer frontend.
+// app.get('/demo', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../public/demo.html'));
+// });
 
 // Start Server
 if (require.main === module) {

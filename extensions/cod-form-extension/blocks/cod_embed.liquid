@@ -1,0 +1,67 @@
+{% comment %}
+  COD Auto Button — App Embed Block (target: body)
+  ─────────────────────────────────────────────────
+  Auto-injects the COD button on product pages if enabled in App Embeds.
+{% endcomment %}
+
+{{ 'bootstrap-icons.css' | asset_url | stylesheet_tag }}
+{{ 'cod-modal.css'       | asset_url | stylesheet_tag }}
+
+<script>
+  window.COD_APP_API_BASE   = {{ app.url | json }};
+  window.COD_SHOP_DOMAIN    = {{ shop.permanent_domain | json }};
+  window.COD_SHOP_NAME      = {{ shop.name | json }};
+  window.COD_EMBED_SETTINGS = {
+    buttonLabel:  {{ block.settings.button_label  | json }},
+    btnColor:     {{ block.settings.btn_color     | json }},
+    btnTextColor: {{ block.settings.btn_text_color | json }}
+  };
+
+  {%- if product -%}
+  {%- assign variant = product.selected_or_first_available_variant -%}
+  {%- assign featured_img = product.featured_image | default: product.images.first -%}
+  window.COD_PRODUCT = {
+    title:        {{ product.title | json }},
+    id:           {{ product.id | json }},
+    variantId:    {{ variant.id | json }},
+    variantTitle: {{ variant.title | json }},
+    price:        {{ variant.price | divided_by: 100.0 }},
+    image:        {{ featured_img | img_url: '300x300' | json }},
+    shopName:     {{ shop.name | json }}
+  };
+  {%- endif -%}
+</script>
+
+<script src="{{ 'cod-modal.js' | asset_url }}" defer></script>
+<script src="{{ 'cod-embed.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "COD Auto Button",
+  "target": "body",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Automatically adds a COD checkout button on product pages."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button Label",
+      "default": "Buy with COD"
+    },
+    {
+      "type": "color",
+      "id": "btn_color",
+      "label": "Button Color",
+      "default": "#108043"
+    },
+    {
+      "type": "color",
+      "id": "btn_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    }
+  ]
+}
+{% endschema %}
